@@ -33,7 +33,7 @@ namespace atl_graphics_namespace_config
 
     void bitmap_font::incremental_load(const application_folder & in_application_folder)
     {
-        switch(internal_status)
+        switch(internal_status.load())
         {
             case bitmap_font_status::ready:
             case bitmap_font_status::failed:

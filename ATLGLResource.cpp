@@ -13,8 +13,8 @@ namespace atl_graphics_namespace_config
 #ifdef DEBUG
     base_resource::operator GLuint () const
     {
-        SGDebugBreakIf(isInvalid(), "Accesing invalid GL resource");
-        return pm_resource;
+        atl_assert_debug(valid(), "Accesing invalid GL resource");
+        return internal_gl_handle;
     }
 #endif
 
@@ -27,7 +27,7 @@ namespace atl_graphics_namespace_config
     void texture_resource::free()
     {
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsTexture(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_assert_debug(glIsTexture(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteTextures(1, &internal_gl_handle);
         check_gl_errors();
@@ -43,7 +43,7 @@ namespace atl_graphics_namespace_config
     void shader_program_resource::free()
     {
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsProgram(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_assert_debug(glIsProgram(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteProgram(internal_gl_handle);
         check_gl_errors();
@@ -59,7 +59,7 @@ namespace atl_graphics_namespace_config
     void buffer_resource::free()
     {
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsBuffer(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_assert_debug(glIsBuffer(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteBuffers(1, &internal_gl_handle);
         check_gl_errors();
@@ -73,15 +73,15 @@ namespace atl_graphics_namespace_config
 #endif
 
 #ifdef PLATFORM_IOS
-        glGenVertexArraysOES(1, &pm_resource);
+        glGenVertexArraysOES(1, &internal_gl_handle);
         check_gl_errors();
         return pm_resource != 0;
 #endif
 
 #ifdef PLATFORM_OSX
-        glGenVertexArraysAPPLE(1, &pm_resource);
-        :check_gl_errors();
-        return pm_resource != 0;
+        glGenVertexArraysAPPLE(1, &internal_gl_handle);
+        check_gl_errors();
+        return internal_gl_handle != 0;
 #endif
     }
 
@@ -92,26 +92,20 @@ namespace atl_graphics_namespace_config
 #endif
 
 #ifdef PLATFORM_IOS
-#ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayOES(pm_resource), "Resource isn't valid when calling bind, is everything OK?");
-#endif
-        if(pm_resource != 0)
+        if(internal_gl_handle != 0)
         {
-            glBindVertexArrayOES(pm_resource);
-            atf::check_gl_errors();
+            glBindVertexArrayOES(internal_gl_handle);
+            check_gl_errors();
             return true;
         }
         return false;
 #endif
 
 #ifdef PLATFORM_OSX
-#ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayAPPLE(pm_resource), "Resource isn't valid when calling bind, is everything OK?");
-#endif
-        if(pm_resource != 0)
+        if(internal_gl_handle != 0)
         {
-            glBindVertexArrayAPPLE(pm_resource);
-            atf::check_gl_errors();
+            glBindVertexArrayAPPLE(internal_gl_handle);
+            check_gl_errors();
             return true;
         }
         return false;
@@ -126,13 +120,13 @@ namespace atl_graphics_namespace_config
 
 #ifdef PLATFORM_IOS
         glBindVertexArrayOES(0);
-        atf::check_gl_errors();
+        check_gl_errors();
         return true;
 #endif
 
 #ifdef PLATFORM_OSX
         glBindVertexArrayAPPLE(0);
-        atf::check_gl_errors();
+        check_gl_errors();
         return true;
 #endif
     }
@@ -145,13 +139,13 @@ namespace atl_graphics_namespace_config
 
 #ifdef PLATFORM_IOS
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayOES(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsVertexArrayOES(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
-        if(pm_resource != 0)
+        if(internal_gl_handle != 0)
         {
-            glDeleteVertexArraysOES(1, &pm_resource);
-            atf::check_gl_errors();
-            pm_resource = 0;
+            glDeleteVertexArraysOES(1, &internal_gl_handle);
+            check_gl_errors();
+            internal_gl_handle = 0;
             return true;
         }
         return false;
@@ -159,13 +153,13 @@ namespace atl_graphics_namespace_config
 
 #ifdef PLATFORM_OSX
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayAPPLE(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsVertexArrayAPPLE(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
-        if(pm_resource != 0)
+        if(internal_gl_handle != 0)
         {
-            glDeleteVertexArraysAPPLE(1, &pm_resource);
-            atf::check_gl_errors();
-            pm_resource = 0;
+            glDeleteVertexArraysAPPLE(1, &internal_gl_handle);
+            check_gl_errors();
+            internal_gl_handle = 0;
             return true;
         }
         return false;

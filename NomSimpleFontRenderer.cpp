@@ -88,7 +88,7 @@ namespace atl_graphics_namespace_config
                             glBufferData(GL_ELEMENT_ARRAY_BUFFER, atl::c_array_byte_length(pm_indexData), &pm_indexData[0], GL_STATIC_DRAW);
                             check_gl_errors();
                         }
-                        atl::c_array_last(pm_glVertexArray).unbind();
+                        atl::c_array_last_by_ref(pm_glVertexArray).unbind();
 
                         // Create shader program.
                         pm_glProgram.alloc();

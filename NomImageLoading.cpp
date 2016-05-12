@@ -114,7 +114,7 @@ namespace atl_graphics_namespace_config
         {
             for(unsigned int idx_x = 0; idx_x < in_width; idx_x++)
             {
-                const unsigned char * l_ptr = NomImageLoading::getImagePixelPtr<4>(in_data, idx_x, idx_y, in_width, in_height);
+                const unsigned char * l_ptr = getImagePixelPtr<4>(in_data, idx_x, idx_y, in_width, in_height);
 
                 if(l_ptr[0] == 0 &&
                    l_ptr[1] == 0 &&

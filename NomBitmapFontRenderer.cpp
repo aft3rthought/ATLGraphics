@@ -20,7 +20,7 @@ namespace atl_graphics_namespace_config
 
     void bitmap_font_renderer::incremental_load(const application_folder & in_application_folder)
     {
-        switch(internal_status)
+        switch(internal_status.load())
         {
             case bitmap_font_renderer_status::ready:
             case bitmap_font_renderer_status::failed:
@@ -88,7 +88,7 @@ namespace atl_graphics_namespace_config
                             glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(pm_indexData), &pm_indexData[0], GL_STATIC_DRAW);
                             check_gl_errors();
                         }
-                        atl::c_array_last(pm_glVertexArray).unbind();
+                        atl::c_array_last_by_ref(pm_glVertexArray).unbind();
 
                         // Create shader program.
                         pm_glProgram.alloc();

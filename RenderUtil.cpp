@@ -17,13 +17,13 @@ namespace atl
             // On OSX we need to prefix the shader with some junk:
 #ifdef PLATFORM_OSX
             {
-                const std::string cl_shaderPrefix("#version 120\n#define lowp\n#define mediump\n#define highp\n#define texture2DLodEXT texture2DLod\n");
-
-                std::string l_originalShader(l_shaderData.data(), l_shaderData.size());
-                std::string l_prefixedShader = cl_shaderPrefix + l_originalShader;
-
-                l_shaderData.resize(l_prefixedShader.length());
-                std::copy(l_prefixedShader.begin(), l_prefixedShader.end(), l_shaderData.begin());
+                const char * l_shader_prefix("#version 120\n#define lowp\n#define mediump\n#define highp\n#define texture2DLodEXT texture2DLod\n");
+                const size_t l_shader_prefix_len = strlen(l_shader_prefix);
+                
+                modified_data.reserve(modified_data.size() + l_shader_prefix_len);
+                std::move(modified_data.begin(), modified_data.end(), modified_data.begin() + l_shader_prefix_len);
+                for(int i = 0; i < l_shader_prefix_len; i++)
+                    modified_data[i] = l_shader_prefix[i];
             }
 #endif
 
@@ -43,12 +43,12 @@ namespace atl
         //
 #if defined(DEBUG)
         GLint l_logLength;
-        glGetShaderiv(*in_shader, GL_INFO_LOG_LENGTH, &l_logLength);
+        glGetShaderiv(*shader_gl_handle, GL_INFO_LOG_LENGTH, &l_logLength);
         if(l_logLength > 0)
         {
             GLchar *log = (GLchar *)malloc(l_logLength);
-            glGetShaderInfoLog(*in_shader, l_logLength, &l_logLength, log);
-            printf("------------------\nShader Compile Warnings + Errors\nShader: %s (%s)\n%s\n------------------\n", in_shaderName.c_str(), in_type == GL_VERTEX_SHADER ? "Vertex" : "Pixel", log);
+            glGetShaderInfoLog(*shader_gl_handle, l_logLength, &l_logLength, log);
+            printf("------------------\nShader Compile Warnings + Errors\nShader: %d (%s)\n%s\n------------------\n", *shader_gl_handle, type == GL_VERTEX_SHADER ? "Vertex" : "Pixel", log);
             free(log);
         }
 #endif
