@@ -59,6 +59,10 @@ namespace atl_graphics_namespace_config
 
                     for(auto & sheetId : textures)
                     {
+                        // give the sheet a valid opengl texture ID
+                        glGenTextures(1, &sheetId);
+                        check_gl_errors();
+
                         int32_t sheetWidth = 1 << l_stream.read_ranged_int(0, 12);
                         int32_t sheetHeight = 1 << l_stream.read_ranged_int(0, 12);
 
@@ -126,8 +130,6 @@ namespace atl_graphics_namespace_config
                         SGFatalErrorIf(imageWidthOut != sheetWidth || imageHeightOut != sheetHeight, "PNG in sprite sheet of unexpected size");
 
                         // Allocate GL resource:
-                        glGenTextures(1, &sheetId);
-                        check_gl_errors();
                         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
                         check_gl_errors();
                         glTexImage2D(GL_TEXTURE_2D,
