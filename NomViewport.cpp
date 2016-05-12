@@ -1,39 +1,43 @@
 
 
-#include "./NomViewport.h"
+#include "NomViewport.h"
 
 #include "ATLCrossPlatform/stage.h"
 #include "ATF/NomRendererState.h"
 #include "ATF/NomRenderingHeaders.h"
 
-NomViewport::NomViewport(const atl::box2f & l_trimArea,
-                         const atl::stage & in_stage,
-                         NomRendererState & in_rendererState) :
-pm_rendererState(in_rendererState)
+namespace atl_graphics_namespace_config
 {
-    pm_oldScreenBounds = in_rendererState.m_currentBounds;
-    
-    glGetIntegerv(GL_VIEWPORT, pm_oldViewport);
+    viewport::viewport(const atl::box2f & in_trim_area,
+                       const atl::stage & in_stage,
+                       shared_renderer_state & in_renderer_state)
+        :
+        renderer_state(in_renderer_state)
+    {
+        old_screen_bounds = in_renderer_state.m_currentBounds;
 
-    float l_contentLPct = (l_trimArea.l - in_stage.bounds().l) / in_stage.dimensions().w;
-    float l_contentBPct = (l_trimArea.b - in_stage.bounds().b) / in_stage.dimensions().h;
-    float l_contentWPct = l_trimArea.width() / in_stage.dimensions().w;
-    float l_contentHPct = l_trimArea.height() / in_stage.dimensions().h;
+        glGetIntegerv(GL_VIEWPORT, old_viewport);
 
-    glViewport((GLint)(l_contentLPct * in_rendererState.m_glViewportWidth),
-               (GLint)(l_contentBPct * in_rendererState.m_glViewportHeight),
-               (GLint)(l_contentWPct * in_rendererState.m_glViewportWidth),
-               (GLint)(l_contentHPct * in_rendererState.m_glViewportHeight));
+        float l_contentLPct = (in_trim_area.l - in_stage.bounds().l) / in_stage.dimensions().w;
+        float l_contentBPct = (in_trim_area.b - in_stage.bounds().b) / in_stage.dimensions().h;
+        float l_contentWPct = in_trim_area.width() / in_stage.dimensions().w;
+        float l_contentHPct = in_trim_area.height() / in_stage.dimensions().h;
 
-    in_rendererState.m_currentBounds = l_trimArea;
-}
+        glViewport((GLint)(l_contentLPct * in_renderer_state.m_glViewportWidth),
+                   (GLint)(l_contentBPct * in_renderer_state.m_glViewportHeight),
+                   (GLint)(l_contentWPct * in_renderer_state.m_glViewportWidth),
+                   (GLint)(l_contentHPct * in_renderer_state.m_glViewportHeight));
 
-NomViewport::~NomViewport()
-{
-    pm_rendererState.m_currentBounds = pm_oldScreenBounds;
-    
-    glViewport(pm_oldViewport[0],
-               pm_oldViewport[1],
-               pm_oldViewport[2],
-               pm_oldViewport[3]);
+        in_renderer_state.m_currentBounds = in_trim_area;
+    }
+
+    viewport::~viewport()
+    {
+        renderer_state.m_currentBounds = old_screen_bounds;
+
+        glViewport(old_viewport[0],
+                   old_viewport[1],
+                   old_viewport[2],
+                   old_viewport[3]);
+    }
 }

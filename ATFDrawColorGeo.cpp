@@ -90,13 +90,10 @@ void ATFDrawColorGeo::prepareBuffers(ATLGLVertexArray & ref_vertexArray,
                                      const std::vector<Tri> & in_triangles,
                                      bool in_useStaticBuffers)
 {
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-    
-    SGDebugBreakIf(ref_vertexArray.isInvalid(), "Allocate this ahead of time!");
     SGDebugBreakIf(ref_vertexBuffer.isInvalid(), "Allocate this ahead of time!");
     SGDebugBreakIf(ref_indexBuffer.isInvalid(), "Allocate this ahead of time!");
     
-    glBindVertexArray_NOM(ref_vertexArray);
+	ref_vertexArray.bind();
     
     glBindBuffer(GL_ARRAY_BUFFER, ref_vertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * in_vertices.size(), in_vertices.data(), in_useStaticBuffers ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW);
@@ -107,10 +104,9 @@ void ATFDrawColorGeo::prepareBuffers(ATLGLVertexArray & ref_vertexArray,
     glVertexAttribPointer(ATTRIBUTE_VERT_POSITION, 3, GL_FLOAT, GL_FALSE, sizeof(ATFDrawColorGeo::Vertex), 0);
     
     glEnableVertexAttribArray(ATTRIBUTE_VERT_COLOR);
-    glVertexAttribPointer(ATTRIBUTE_VERT_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(ATFDrawColorGeo::Vertex), BUFFER_OFFSET(2 * sizeof(float)));
-#undef BUFFER_OFFSET
+    glVertexAttribPointer(ATTRIBUTE_VERT_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(ATFDrawColorGeo::Vertex), (char *)NULL + (2 * sizeof(float)));
     
-    glBindVertexArray_NOM(0);
+	ref_vertexArray.unbind();
 }
 
 void ATFDrawColorGeo::render(const ATLGLVertexArray & in_vbo,

@@ -8,7 +8,7 @@
 
 #include <string>
 
-namespace NomImageLoading
+namespace atl_graphics_namespace_config
 {
     unsigned int getNextPow2(unsigned int in_src);
     

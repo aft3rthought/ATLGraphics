@@ -3,89 +3,172 @@
 #include "ATLGLResource.h"
 #include "ATLUtil/debug_break.h"
 
-ATLGLBaseResource::~ATLGLBaseResource()
+namespace atl_graphics_namespace_config
 {
-    static_assert(sizeof(ATLGLBaseResource) == sizeof(GLuint),"Size of ATLGLResource has to be the same as GLuint");
-    static_assert(sizeof(ATLGLTexture) == sizeof(GLuint),"Size of ATLGLResource has to be the same as GLuint");
-    static_assert(sizeof(ATLGLProgram) == sizeof(GLuint),"Size of ATLGLResource has to be the same as GLuint");
-    static_assert(sizeof(ATLGLBuffer) == sizeof(GLuint),"Size of ATLGLResource has to be the same as GLuint");
-    static_assert(sizeof(ATLGLVertexArray) == sizeof(GLuint),"Size of ATLGLResource has to be the same as GLuint");
-    
-    SGDebugBreakIf(isValid(), "GL resource not set to invalid before owner is destroyed! Is a resource being lost?");
-}
+    base_resource::~base_resource()
+    {
+        SGDebugBreakIf(valid(), "GL resource not set to invalid before owner is destroyed! Is a resource being lost?");
+    }
 
 #ifdef DEBUG
-ATLGLBaseResource::operator GLuint () const
-{
-    SGDebugBreakIf(isInvalid(), "Accesing invalid GL resource");
-    return pm_resource;
-}
+    base_resource::operator GLuint () const
+    {
+        SGDebugBreakIf(isInvalid(), "Accesing invalid GL resource");
+        return pm_resource;
+    }
 #endif
 
-void ATLGLTexture::alloc()
-{
-    glGenTextures(1, &pm_resource);
-    atf::check_gl_errors();
-}
+    void texture_resource::alloc()
+    {
+        glGenTextures(1, &internal_gl_handle);
+        check_gl_errors();
+    }
 
-void ATLGLTexture::free()
-{
+    void texture_resource::free()
+    {
 #ifdef DEBUG
-    SGDebugBreakIf(!glIsTexture(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsTexture(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
-    
-    glDeleteTextures(1, &pm_resource);
-    atf::check_gl_errors();
-    pm_resource = 0;
-}
+        glDeleteTextures(1, &internal_gl_handle);
+        check_gl_errors();
+        internal_gl_handle = 0;
+    }
 
-void ATLGLProgram::alloc()
-{
-    pm_resource = glCreateProgram();
-    atf::check_gl_errors();
-}
+    void shader_program_resource::alloc()
+    {
+        internal_gl_handle = glCreateProgram();
+        check_gl_errors();
+    }
 
-void ATLGLProgram::free()
-{
+    void shader_program_resource::free()
+    {
 #ifdef DEBUG
-    SGDebugBreakIf(!glIsProgram(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsProgram(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
-    
-    glDeleteProgram(pm_resource);
-    atf::check_gl_errors();
-    pm_resource = 0;
-}
+        glDeleteProgram(internal_gl_handle);
+        check_gl_errors();
+        internal_gl_handle = 0;
+    }
 
-void ATLGLBuffer::alloc()
-{
-    glGenBuffers(1, &pm_resource);
-    atf::check_gl_errors();
-}
+    void buffer_resource::alloc()
+    {
+        glGenBuffers(1, &internal_gl_handle);
+        check_gl_errors();
+    }
 
-void ATLGLBuffer::free()
-{
+    void buffer_resource::free()
+    {
 #ifdef DEBUG
-    SGDebugBreakIf(!glIsBuffer(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsBuffer(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
-    
-    glDeleteBuffers(1, &pm_resource);
-    atf::check_gl_errors();
-    pm_resource = 0;
-}
+        glDeleteBuffers(1, &internal_gl_handle);
+        check_gl_errors();
+        internal_gl_handle = 0;
+    }
 
-void ATLGLVertexArray::alloc()
-{
-    glGenVertexArrays_NOM(1, &pm_resource);
-    atf::check_gl_errors();
-}
+    bool vertex_array_resource::alloc()
+    {
+#ifdef PLATFORM_WINDOWS
+        return false;
+#endif
 
-void ATLGLVertexArray::free()
-{
+#ifdef PLATFORM_IOS
+        glGenVertexArraysOES(1, &pm_resource);
+        check_gl_errors();
+        return pm_resource != 0;
+#endif
+
+#ifdef PLATFORM_OSX
+        glGenVertexArraysAPPLE(1, &pm_resource);
+        :check_gl_errors();
+        return pm_resource != 0;
+#endif
+    }
+
+    bool vertex_array_resource::bind() const
+    {
+#ifdef PLATFORM_WINDOWS
+        return false;
+#endif
+
+#ifdef PLATFORM_IOS
 #ifdef DEBUG
-    SGDebugBreakIf(!glIsVertexArray_NOM(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+        SGDebugBreakIf(!glIsVertexArrayOES(pm_resource), "Resource isn't valid when calling bind, is everything OK?");
 #endif
-    
-    glDeleteVertexArrays_NOM(1, &pm_resource);
-    atf::check_gl_errors();
-    pm_resource = 0;
+        if(pm_resource != 0)
+        {
+            glBindVertexArrayOES(pm_resource);
+            atf::check_gl_errors();
+            return true;
+        }
+        return false;
+#endif
+
+#ifdef PLATFORM_OSX
+#ifdef DEBUG
+        SGDebugBreakIf(!glIsVertexArrayAPPLE(pm_resource), "Resource isn't valid when calling bind, is everything OK?");
+#endif
+        if(pm_resource != 0)
+        {
+            glBindVertexArrayAPPLE(pm_resource);
+            atf::check_gl_errors();
+            return true;
+        }
+        return false;
+#endif
+    }
+
+    bool vertex_array_resource::unbind() const
+    {
+#ifdef PLATFORM_WINDOWS
+        return false;
+#endif
+
+#ifdef PLATFORM_IOS
+        glBindVertexArrayOES(0);
+        atf::check_gl_errors();
+        return true;
+#endif
+
+#ifdef PLATFORM_OSX
+        glBindVertexArrayAPPLE(0);
+        atf::check_gl_errors();
+        return true;
+#endif
+    }
+
+    bool vertex_array_resource::free()
+    {
+#ifdef PLATFORM_WINDOWS
+        return false;
+#endif
+
+#ifdef PLATFORM_IOS
+#ifdef DEBUG
+        SGDebugBreakIf(!glIsVertexArrayOES(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+#endif
+        if(pm_resource != 0)
+        {
+            glDeleteVertexArraysOES(1, &pm_resource);
+            atf::check_gl_errors();
+            pm_resource = 0;
+            return true;
+        }
+        return false;
+#endif
+
+#ifdef PLATFORM_OSX
+#ifdef DEBUG
+        SGDebugBreakIf(!glIsVertexArrayAPPLE(pm_resource), "Resource isn't valid when calling free, is everything OK?");
+#endif
+        if(pm_resource != 0)
+        {
+            glDeleteVertexArraysAPPLE(1, &pm_resource);
+            atf::check_gl_errors();
+            pm_resource = 0;
+            return true;
+        }
+        return false;
+#endif
+    }
 }

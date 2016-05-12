@@ -4,57 +4,66 @@
 
 #include "ATF/ATLGLResource.h"
 #include "ATLUtil/math2d.h"
+#include "ATF/NomFiles.h"
 
 #include <vector>
 #include <string>
+#include <atomic>
 
-class NomFontChar
+namespace atl_graphics_namespace_config
 {
-public:
-    char m_char;
-    float m_advance;
-    atl::point2f m_offset;
-    atl::size2f m_size;
-    atl::box2f m_texBounds;
-    
-    NomFontChar(char in_char,
-                float in_advance,
-                const atl::point2f & in_offset,
-                const atl::size2f & in_size,
-                const atl::box2f & in_texBounds);
-};
+    struct application_folder;
 
-class NomFont
-{
-public:
-    std::string m_fontName;
-    float m_spaceCharacterSize;
-    ATLGLTexture m_texture;
-    std::vector<NomFontChar> m_fontChars;
-    atl::point2f m_pixTexelStride;
-    float m_boundsYMin;
-    float m_boundsYMax;
-    float m_lineHeight;
-    
-    NomFont(const std::string & in_fontName,
-            float in_spaceCharacterSize,
-            const atl::point2f & in_pixTexelStride,
-            float in_boundsYMin,
-            float in_boundsYMax,
-            float m_lineHeight);
-    
-    ~NomFont();
-};
+    struct scalable_font_char
+    {
+    public:
+        char m_char;
+        float m_advance;
+        atl::point2f m_offset;
+        atl::size2f m_size;
+        atl::box2f m_texBounds;
 
-class NomFontResource
-{
-public:
-    void loadFromFile(const std::string & inFileName);
-    bool ready() const { return pmFont != nullptr; }
-    const NomFont & font() const { return *pmFont; }
-    
-    ~NomFontResource();
-    
-private:
-    NomFont* pmFont;
-};
+        scalable_font_char(char in_char,
+                           float in_advance,
+                           const atl::point2f & in_offset,
+                           const atl::size2f & in_size,
+                           const atl::box2f & in_texBounds);
+    };
+
+    struct scalable_font_data
+    {
+        std::string m_fontName;
+        float m_spaceCharacterSize;
+        texture_resource m_texture;
+        std::vector<scalable_font_char> m_fontChars;
+        atl::point2f m_pixTexelStride;
+        float m_boundsYMin;
+        float m_boundsYMax;
+        float m_lineHeight;
+    };
+
+    enum class scalable_font_status
+    {
+        waiting_to_load,
+        loading,
+        ready,
+        failed
+    };
+
+    struct scalable_font
+    {
+    public:
+        scalable_font(const char * in_file_name);
+        ~scalable_font();
+
+        const scalable_font_data & font_data() const { return internal_font_data; }
+        scalable_font_status status() const { return internal_status; }
+        void incremental_load(const application_folder & in_application_folder);
+
+    private:
+        std::string internal_file_name;
+        scalable_font_data internal_font_data;
+        std::atomic<scalable_font_status> internal_status;
+        file_data internal_loaded_file_data;
+    };
+}

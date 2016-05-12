@@ -1,232 +1,268 @@
 
 
-#include "./NomFlatColorGeoRenderer.h"
+#include "NomFlatColorGeoRenderer.h"
 
 #include "ATLUtil/debug_break.h"
-#include "ATF/NomRendererState.h"
+#include "NomRendererState.h"
+#include "RenderUtil.h"
 
-NomFlatColorGeoRenderer::NomFlatColorGeoRenderer(const NomFiles & in_files,
-                                                 NomRendererState & in_rendererState) :
-    pm_rendererState(in_rendererState)
-{    
-    GLuint l_vertShader, l_fragShader;
-    
-    // Create shader program.
-    pm_glProgram.alloc();
-    
-    // Create and compile vertex shader.
-    if (!RenderUtil::compileShader(in_files, &l_vertShader, GL_VERTEX_SHADER, "FlatColorGeo"))
+namespace atl_graphics_namespace_config
+{
+    flat_color_geometry_renderer::flat_color_geometry_renderer(shared_renderer_state & in_rendererState)
+    :
+    internal_shared_renderer_state(in_rendererState),
+    internal_status(flat_color_geometry_renderer_status::waiting_to_load)
+    {}
+
+    void flat_color_geometry_renderer::incremental_load(const application_folder & in_application_folder)
     {
-        SGDebugBreak("Failed to compile vertex shader\n");
-        return;
-    }
-    
-    // Create and compile fragment shader.
-    if (!RenderUtil::compileShader(in_files, &l_fragShader, GL_FRAGMENT_SHADER, "FlatColorGeo"))
-    {
-        SGDebugBreak("Failed to compile fragment shader\n");
-        return;
-    }
-    
-    // Attach vertex shader to program.
-    glAttachShader(pm_glProgram, l_vertShader);
-    atf::check_gl_errors();
-    
-    // Attach fragment shader to program.
-    glAttachShader(pm_glProgram, l_fragShader);
-    atf::check_gl_errors();
-    
-    // Bind attribute locations.
-    // This needs to be done prior to linking.
-    glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_POSITION,  "v_vertPosition");
-    atf::check_gl_errors();
-    glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_COLOR,     "v_vertColor");
-    atf::check_gl_errors();
-    
-    // Link program.
-    if (!RenderUtil::linkProgram(pm_glProgram))
-    {
-        printf("Failed to link program: %i", (GLuint)pm_glProgram);
-        
-        if (l_vertShader)
+        switch(internal_status)
         {
-            glDeleteShader(l_vertShader);
-            atf::check_gl_errors();
-            l_vertShader = 0;
+            case flat_color_geometry_renderer_status::ready:
+            case flat_color_geometry_renderer_status::failed:
+                break;
+            case flat_color_geometry_renderer_status::waiting_to_load:
+            {
+                internal_vertex_shader_file.load(in_application_folder, "FlatColorGeo.vsh");
+                internal_fragment_shader_file.load(in_application_folder, "FlatColorGeo.fsh");
+                internal_status = flat_color_geometry_renderer_status::loading;
+                break;
+            }
+            case flat_color_geometry_renderer_status::loading:
+            {
+                auto l_vsh_status = internal_vertex_shader_file.status();
+                auto l_fsh_status = internal_fragment_shader_file.status();
+                if((l_vsh_status != file_data_status::loading &&
+                    l_vsh_status != file_data_status::ready) ||
+                    (l_fsh_status != file_data_status::loading &&
+                     l_fsh_status != file_data_status::ready))
+                {
+                    internal_status = flat_color_geometry_renderer_status::failed;
+                }
+                else if(l_vsh_status == file_data_status::ready &&
+                        l_fsh_status == file_data_status::ready)
+                {
+                    GLuint l_vertex_shader = 0, l_fragment_shader = 0;
+
+                    if(!compile_shader(internal_vertex_shader_file.data(), &l_vertex_shader, GL_VERTEX_SHADER) ||
+                       !compile_shader(internal_fragment_shader_file.data(), &l_fragment_shader, GL_FRAGMENT_SHADER))
+                    {
+                        atl_break_debug("Shader failed to compile");
+                        internal_status = flat_color_geometry_renderer_status::failed;
+                    }
+                    else
+                    {
+                        // Create shader program.
+                        internal_program_gl_handle.alloc();
+
+                        // Attach vertex shader to program.
+                        glAttachShader(internal_program_gl_handle, l_vertex_shader);
+                        check_gl_errors();
+
+                        // Attach fragment shader to program.
+                        glAttachShader(internal_program_gl_handle, l_fragment_shader);
+                        check_gl_errors();
+
+                        // Bind attribute locations.
+                        // This needs to be done prior to linking.
+                        glBindAttribLocation(internal_program_gl_handle, ATTRIBUTE_VERT_POSITION, "v_vertPosition");
+                        check_gl_errors();
+                        glBindAttribLocation(internal_program_gl_handle, ATTRIBUTE_VERT_COLOR, "v_vertColor");
+                        check_gl_errors();
+
+                        // Link program.
+                        if(link_program(internal_program_gl_handle))
+                        {
+                            // Get uniform locations.
+                            pm_shaderUniforms[UNIFORM_SCREEN_DIM] = glGetUniformLocation(internal_program_gl_handle, "u_screenBounds");
+                            pm_shaderUniforms[UNIFORM_COLOR] = glGetUniformLocation(internal_program_gl_handle, "u_color");
+                            pm_shaderUniforms[UNIFORM_SCALE] = glGetUniformLocation(internal_program_gl_handle, "u_scale");
+                            pm_shaderUniforms[UNIFORM_OFFSET] = glGetUniformLocation(internal_program_gl_handle, "u_offset");
+
+                            internal_status = flat_color_geometry_renderer_status::ready;
+                        }
+                        else
+                        {
+                            atl_break_debug("Shader failed to link");
+                            internal_program_gl_handle.free();
+                            internal_status = flat_color_geometry_renderer_status::failed;
+                        }
+                    }
+
+                    internal_vertex_shader_file.free();
+                    internal_fragment_shader_file.free();
+
+                    // Release vertex and fragment shaders.
+                    if(l_vertex_shader != 0)
+                    {
+                        glDetachShader(internal_program_gl_handle, l_vertex_shader);
+                        glDeleteShader(l_vertex_shader);
+                    }
+                    if(l_fragment_shader != 0)
+                    {
+                        glDetachShader(internal_program_gl_handle, l_fragment_shader);
+                        glDeleteShader(l_fragment_shader);
+                    }
+                }
+                break;
+            }
         }
-        if (l_fragShader)
+    }
+
+    flat_color_geometry_renderer::~flat_color_geometry_renderer()
+    {
+        internal_program_gl_handle.free();
+    }
+
+    void flat_color_geometry_renderer::internal_configure_vertex_array(const buffer_resource & in_vertexBuffer, const buffer_resource & in_indexBuffer)
+    {
+        glBindBuffer(GL_ARRAY_BUFFER, in_vertexBuffer);
+        check_gl_errors();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, in_indexBuffer);
+        check_gl_errors();
+
+        glEnableVertexAttribArray(ATTRIBUTE_VERT_POSITION);
+        check_gl_errors();
+        glVertexAttribPointer(ATTRIBUTE_VERT_POSITION, 2, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset_start(flat_color_geometry_renderer::Vertex));
+        check_gl_errors();
+
+        glEnableVertexAttribArray(ATTRIBUTE_VERT_COLOR);
+        check_gl_errors();
+        glVertexAttribPointer(ATTRIBUTE_VERT_COLOR, 4, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(flat_color_geometry_renderer::Vertex, color));
+        check_gl_errors();
+    }
+
+    void flat_color_geometry_renderer::prepareBuffers(const vertex_array_resource & in_vertexArray,
+                                                      const buffer_resource & in_vertexBuffer,
+                                                      const buffer_resource & in_indexBuffer,
+                                                      const std::vector<Vertex> & in_vertices,
+                                                      const std::vector<Tri> & in_triangles,
+                                                      const bool in_useStaticBuffers)
+    {
+        atl_assert_debug(in_vertexBuffer.valid(), "Allocate this ahead of time!");
+        atl_assert_debug(in_indexBuffer.valid(), "Allocate this ahead of time!");
+
+        in_vertexArray.bind();
+
+        internal_configure_vertex_array(in_vertexBuffer, in_indexBuffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * in_vertices.size(), in_vertices.data(), in_useStaticBuffers ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW);
+        check_gl_errors();
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Tri) * in_triangles.size(), in_triangles.data(), GL_STATIC_DRAW);
+        check_gl_errors();
+
+        in_vertexArray.unbind();
+    }
+
+    void flat_color_geometry_renderer::render(const vertex_array_resource & in_vbo,
+                                              const buffer_resource & in_vertexBuffer,
+                                              const buffer_resource & in_indexBuffer,
+                                              const int in_numTriangles,
+                                              const atl::color & in_color)
+    {
+        render(in_vbo,
+               in_vertexBuffer,
+               in_indexBuffer,
+               in_numTriangles,
+               in_color,
+               atl::size2f::Identity,
+               atl::point2f(0.f, 0.f));
+    }
+
+    void flat_color_geometry_renderer::render(const vertex_array_resource & in_vbo,
+                                              const buffer_resource & in_vertexBuffer,
+                                              const buffer_resource & in_indexBuffer,
+                                              const int in_numTriangles,
+                                              const atl::color & in_color,
+                                              const atl::size2f & in_scale,
+                                              const atl::point2f & in_offset)
+    {
+        if(internal_shared_renderer_state.setAsCurrentRenderer(this))
         {
-            glDeleteShader(l_fragShader);
-            atf::check_gl_errors();
-            l_fragShader = 0;
+            glUseProgram(internal_program_gl_handle);
+            check_gl_errors();
+
+            glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],
+                        internal_shared_renderer_state.m_currentBounds.l,
+                        internal_shared_renderer_state.m_currentBounds.b,
+                        internal_shared_renderer_state.m_currentBounds.width(),
+                        internal_shared_renderer_state.m_currentBounds.height());
+            check_gl_errors();
         }
-        
-        pm_glProgram.free();
-        
-        return;
+
+        glUniform4f(pm_shaderUniforms[UNIFORM_COLOR], in_color.r, in_color.g, in_color.b, in_color.a);
+        check_gl_errors();
+        glUniform2f(pm_shaderUniforms[UNIFORM_SCALE], in_scale.w, in_scale.h);
+        check_gl_errors();
+        glUniform2f(pm_shaderUniforms[UNIFORM_OFFSET], in_offset.x, in_offset.y);
+        check_gl_errors();
+
+        if(in_vbo.bind())
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, in_vertexBuffer);
+            check_gl_errors();
+        }
+        else
+        {
+            internal_configure_vertex_array(in_vertexBuffer, in_indexBuffer);
+        }
+
+        glDrawElements(GL_TRIANGLES, in_numTriangles * 3, GL_UNSIGNED_INT, (void*)0);
+        check_gl_errors();
     }
-    
-    // Get uniform locations.
-    pm_shaderUniforms[UNIFORM_SCREEN_DIM]   = glGetUniformLocation(pm_glProgram, "u_screenBounds");
-    pm_shaderUniforms[UNIFORM_COLOR]   = glGetUniformLocation(pm_glProgram, "u_color");
-    pm_shaderUniforms[UNIFORM_SCALE]   = glGetUniformLocation(pm_glProgram, "u_scale");
-    pm_shaderUniforms[UNIFORM_OFFSET]   = glGetUniformLocation(pm_glProgram, "u_offset");
-    
-    // Release vertex and fragment shaders.
-    if (l_vertShader)
+
+    void flat_color_geometry_renderer::renderVerts(const vertex_array_resource & in_vbo,
+                                                   const buffer_resource & in_vertexBuffer,
+                                                   const buffer_resource & in_indexBuffer,
+                                                   const int in_numTriangles,
+                                                   const std::vector<Vertex> & in_vertices)
     {
-        glDetachShader(pm_glProgram, l_vertShader);
-        atf::check_gl_errors();
-        glDeleteShader(l_vertShader);
-        atf::check_gl_errors();
+        renderVerts(in_vbo, in_vertexBuffer, in_indexBuffer, in_numTriangles, in_vertices, atl::color_white, atl::size2f::Identity, atl::point2f::Zero);
     }
-    if (l_fragShader)
+
+    void flat_color_geometry_renderer::renderVerts(const vertex_array_resource & in_vbo,
+                                                   const buffer_resource & in_vertexBuffer,
+                                                   const buffer_resource & in_indexBuffer,
+                                                   const int in_numTriangles,
+                                                   const std::vector<Vertex> & in_vertices,
+                                                   const atl::color & in_color,
+                                                   const atl::size2f & in_scale,
+                                                   const atl::point2f & in_offset)
     {
-        glDetachShader(pm_glProgram, l_fragShader);
-        atf::check_gl_errors();
-        glDeleteShader(l_fragShader);
-        atf::check_gl_errors();
+        if(internal_shared_renderer_state.setAsCurrentRenderer(this))
+        {
+            glUseProgram(internal_program_gl_handle);
+            check_gl_errors();
+
+            glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],
+                        internal_shared_renderer_state.m_currentBounds.l,
+                        internal_shared_renderer_state.m_currentBounds.b,
+                        internal_shared_renderer_state.m_currentBounds.width(),
+                        internal_shared_renderer_state.m_currentBounds.height());
+            check_gl_errors();
+        }
+
+        glUniform4f(pm_shaderUniforms[UNIFORM_COLOR], in_color.r, in_color.g, in_color.b, in_color.a);
+        check_gl_errors();
+        glUniform2f(pm_shaderUniforms[UNIFORM_SCALE], in_scale.w, in_scale.h);
+        check_gl_errors();
+        glUniform2f(pm_shaderUniforms[UNIFORM_OFFSET], in_offset.x, in_offset.y);
+        check_gl_errors();
+
+        if(in_vbo.bind())
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, in_vertexBuffer);
+            check_gl_errors();
+        }
+        else
+        {
+            internal_configure_vertex_array(in_vertexBuffer, in_indexBuffer);
+        }
+
+
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex) * in_vertices.size(), in_vertices.data());
+        check_gl_errors();
+
+        glDrawElements(GL_TRIANGLES, in_numTriangles * 3, GL_UNSIGNED_INT, (void*)0);
+        check_gl_errors();
     }
-}
-
-NomFlatColorGeoRenderer::~NomFlatColorGeoRenderer()
-{
-    pm_glProgram.free();
-}
-
-void NomFlatColorGeoRenderer::prepareBuffers(ATLGLVertexArray & ref_vertexArray,
-                                             ATLGLBuffer & ref_vertexBuffer,
-                                             ATLGLBuffer & ref_indexBuffer,
-                                             const std::vector<Vertex> & in_vertices,
-                                             const std::vector<Tri> & in_triangles,
-                                             bool in_useStaticBuffers)
-{
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-    
-    SGDebugBreakIf(ref_vertexArray.isInvalid(), "Allocate this ahead of time!");
-    SGDebugBreakIf(ref_vertexBuffer.isInvalid(), "Allocate this ahead of time!");
-    SGDebugBreakIf(ref_indexBuffer.isInvalid(), "Allocate this ahead of time!");
-    
-    glBindVertexArray_NOM(ref_vertexArray);
-    atf::check_gl_errors();
-    
-    glBindBuffer(GL_ARRAY_BUFFER, ref_vertexBuffer);
-    atf::check_gl_errors();
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * in_vertices.size(), in_vertices.data(), in_useStaticBuffers ? GL_STATIC_DRAW : GL_DYNAMIC_DRAW);
-    atf::check_gl_errors();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ref_indexBuffer);
-    atf::check_gl_errors();
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(Tri) * in_triangles.size(), in_triangles.data(), GL_STATIC_DRAW);
-    atf::check_gl_errors();
-    
-    glEnableVertexAttribArray(ATTRIBUTE_VERT_POSITION);
-    atf::check_gl_errors();
-    glVertexAttribPointer(ATTRIBUTE_VERT_POSITION, 2, GL_FLOAT, GL_FALSE, sizeof(NomFlatColorGeoRenderer::Vertex), 0);
-    atf::check_gl_errors();
-    
-    glEnableVertexAttribArray(ATTRIBUTE_VERT_COLOR);
-    atf::check_gl_errors();
-    glVertexAttribPointer(ATTRIBUTE_VERT_COLOR, 4, GL_FLOAT, GL_FALSE, sizeof(NomFlatColorGeoRenderer::Vertex), BUFFER_OFFSET(2 * sizeof(float)));
-    atf::check_gl_errors();
-#undef BUFFER_OFFSET
-    
-    glBindVertexArray_NOM(0);
-    atf::check_gl_errors();
-}
-
-void NomFlatColorGeoRenderer::render(const ATLGLVertexArray & in_vbo,
-                                     const ATLGLBuffer & in_vertexBuffer,
-                                     int in_numTriangles,
-                                     const atl::color & in_color)
-{
-    render(in_vbo,
-           in_vertexBuffer,
-           in_numTriangles,
-           in_color,
-           atl::size2f::Identity,
-           atl::point2f(0.f, 0.f));
-}
-
-void NomFlatColorGeoRenderer::render(const ATLGLVertexArray & in_vbo,
-                                     const ATLGLBuffer & in_vertexBuffer,
-                                     int in_numTriangles,
-                                     const atl::color & in_color,
-                                     const atl::size2f & in_scale,
-                                     const atl::point2f & in_offset)
-{
-    if(pm_rendererState.setAsCurrentRenderer(this))
-    {
-        glUseProgram(pm_glProgram);
-        atf::check_gl_errors();
-        
-        glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],
-                    pm_rendererState.m_currentBounds.l,
-                    pm_rendererState.m_currentBounds.b,
-                    pm_rendererState.m_currentBounds.width(),
-                    pm_rendererState.m_currentBounds.height());
-        atf::check_gl_errors();
-    }
-    
-    glUniform4f(pm_shaderUniforms[UNIFORM_COLOR], in_color.r, in_color.g, in_color.b, in_color.a);
-    atf::check_gl_errors();
-    glUniform2f(pm_shaderUniforms[UNIFORM_SCALE], in_scale.w, in_scale.h);
-    atf::check_gl_errors();
-    glUniform2f(pm_shaderUniforms[UNIFORM_OFFSET], in_offset.x, in_offset.y);
-    atf::check_gl_errors();
-    
-    glBindVertexArray_NOM(in_vbo);
-    atf::check_gl_errors();
-    glBindBuffer(GL_ARRAY_BUFFER, in_vertexBuffer);
-    atf::check_gl_errors();
-    
-    glDrawElements(GL_TRIANGLES, in_numTriangles * 3, GL_UNSIGNED_INT, (void*)0);
-    atf::check_gl_errors();
-}
-
-void NomFlatColorGeoRenderer::renderVerts(const ATLGLVertexArray & in_vbo,
-                                          const ATLGLBuffer & in_vertexBuffer,
-                                          int in_numTriangles,
-                                          const std::vector<Vertex> & in_vertices)
-{
-    renderVerts(in_vbo, in_vertexBuffer, in_numTriangles, in_vertices, atl::color_white, atl::size2f::Identity, atl::point2f::Zero);
-}
-
-void NomFlatColorGeoRenderer::renderVerts(const ATLGLVertexArray & in_vbo,
-                                          const ATLGLBuffer & in_vertexBuffer,
-                                          int in_numTriangles,
-                                          const std::vector<Vertex> & in_vertices,
-                                          const atl::color & in_color,
-                                          const atl::size2f & in_scale,
-                                          const atl::point2f & in_offset)
-{
-    if(pm_rendererState.setAsCurrentRenderer(this))
-    {
-        glUseProgram(pm_glProgram);
-        atf::check_gl_errors();
-        
-        glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],
-                    pm_rendererState.m_currentBounds.l,
-                    pm_rendererState.m_currentBounds.b,
-                    pm_rendererState.m_currentBounds.width(),
-                    pm_rendererState.m_currentBounds.height());
-        atf::check_gl_errors();
-    }
-    
-    glUniform4f(pm_shaderUniforms[UNIFORM_COLOR], in_color.r, in_color.g, in_color.b, in_color.a);
-    atf::check_gl_errors();
-    glUniform2f(pm_shaderUniforms[UNIFORM_SCALE], in_scale.w, in_scale.h);
-    atf::check_gl_errors();
-    glUniform2f(pm_shaderUniforms[UNIFORM_OFFSET], in_offset.x, in_offset.y);
-    atf::check_gl_errors();
-    
-    glBindVertexArray_NOM(in_vbo);
-    atf::check_gl_errors();
-    glBindBuffer(GL_ARRAY_BUFFER, in_vertexBuffer);
-    atf::check_gl_errors();
-    
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertex) * in_vertices.size(), in_vertices.data());
-    atf::check_gl_errors();
-    
-    glDrawElements(GL_TRIANGLES, in_numTriangles * 3, GL_UNSIGNED_INT, (void*)0);
-    atf::check_gl_errors();
 }
