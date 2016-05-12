@@ -79,11 +79,10 @@ namespace atl_graphics_namespace_config
                         pm_vertexBuffer.alloc();
 
                         pm_vertexArray.bind();
-
                         internal_configure_vertex_array();
-                        glBufferData(GL_ARRAY_BUFFER, atl::c_array_byte_length(cl_spriteVerts), cl_spriteVerts, GL_STATIC_DRAW);
-
                         pm_vertexArray.unbind();
+
+                        glBufferData(GL_ARRAY_BUFFER, atl::c_array_byte_length(cl_spriteVerts), cl_spriteVerts, GL_STATIC_DRAW);
 
                         // Create shader program.
                         pm_program.alloc();
@@ -148,8 +147,11 @@ namespace atl_graphics_namespace_config
     void sprite_renderer::internal_configure_vertex_array() const
     {
         glBindBuffer(GL_ARRAY_BUFFER, pm_vertexBuffer);
+        check_gl_errors();
         glEnableVertexAttribArray(ATTRIBUTE_VERT_INDEXES);
+        check_gl_errors();
         glVertexAttribPointer(ATTRIBUTE_VERT_INDEXES, 4, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset_start(SpriteVert));
+        check_gl_errors();
     }
 
     quad_position sprite_renderer::transform(const sprite_frame & in_spriteFrame,
