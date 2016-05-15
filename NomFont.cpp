@@ -88,8 +88,12 @@ namespace atl_graphics_namespace_config
                             l_charInfos.emplace_back();
                             l_charInfos.back().m_char = l_deserializer.read_byte();
                             l_charInfos.back().m_advance = l_deserializer.read_float();
-                            l_charInfos.back().m_offset = atl::point2f(l_deserializer.read_float(), l_deserializer.read_float());
-                            l_charInfos.back().m_size = atl::size2f(l_deserializer.read_float(), l_deserializer.read_float());
+                            float l_offset_x = l_deserializer.read_float();
+                            float l_offset_y = l_deserializer.read_float();
+                            l_charInfos.back().m_offset = atl::point2f(l_offset_x, l_offset_y);
+                            float l_size_x = l_deserializer.read_float();
+                            float l_size_y = l_deserializer.read_float();
+                            l_charInfos.back().m_size = atl::size2f(l_size_x, l_size_y);
                             l_charInfos.back().m_sheetXPos = l_deserializer.read_ranged_int(0, fontSheetWidth);
                             l_charInfos.back().m_sheetYPos = l_deserializer.read_ranged_int(0, fontSheetHeight);
                             l_charInfos.back().m_sheetWidth = l_deserializer.read_ranged_int(0, fontSheetWidth);
@@ -151,7 +155,7 @@ namespace atl_graphics_namespace_config
                             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // Linear Filtering
                             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); // Linear Filtering
 
-                                                                                              // Fill out all the bookkeeping data to render properly:
+                            // Fill out all the bookkeeping data to render properly:
                             auto & l_fontChars = internal_font_data.m_fontChars;
                             for(const auto & l_info : l_charInfos)
                             {

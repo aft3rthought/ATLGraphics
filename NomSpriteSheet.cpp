@@ -84,8 +84,7 @@ namespace atl_graphics_namespace_config
 
                                 if(l_texR - l_texL == 1)
                                 {
-                                    l_texCoords.l =
-                                        l_texCoords.r = (float(l_texL) + 0.5f) / float(sheetWidth);
+                                    l_texCoords.l = l_texCoords.r = (float(l_texL) + 0.5f) / float(sheetWidth);
                                 }
                                 else
                                 {
@@ -95,8 +94,7 @@ namespace atl_graphics_namespace_config
 
                                 if(l_texB - l_texT == 1)
                                 {
-                                    l_texCoords.t =
-                                        l_texCoords.b = (float(l_texT) + 0.5f) / float(sheetHeight);
+                                    l_texCoords.t = l_texCoords.b = (float(l_texT) + 0.5f) / float(sheetHeight);
                                 }
                                 else
                                 {
@@ -106,10 +104,11 @@ namespace atl_graphics_namespace_config
                             }
 
                             // Deserialize the drawn area:
-                            atl::box2f l_area(l_stream.read_float(),
-                                              l_stream.read_float(),
-                                              l_stream.read_float(),
-                                              l_stream.read_float());
+                            auto l_area_t = l_stream.read_float();
+                            auto l_area_r = l_stream.read_float();
+                            auto l_area_b = l_stream.read_float();
+                            auto l_area_l = l_stream.read_float();
+                            atl::box2f l_area(l_area_t, l_area_r, l_area_b, l_area_l);
 
                             sprites[spriteIndex].set(sheetId, l_texCoords, l_area);
                         }
