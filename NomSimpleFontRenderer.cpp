@@ -605,6 +605,12 @@ namespace atl_graphics_namespace_config
 
         if(pm_rendererState.setAsCurrentRenderer(this))
         {
+            glEnable(GL_BLEND);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
+            glClearColor(0.f, 0.f, 0.f, 1.f);
+            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
             glUseProgram(pm_glProgram);
 
             glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],

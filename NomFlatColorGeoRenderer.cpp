@@ -178,6 +178,12 @@ namespace atl_graphics_namespace_config
     {
         if(internal_shared_renderer_state.setAsCurrentRenderer(this))
         {
+            glEnable(GL_BLEND);
+            glDisable(GL_CULL_FACE);
+            glDisable(GL_DEPTH_TEST);
+            glClearColor(0.f, 0.f, 0.f, 1.f);
+            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
             glUseProgram(internal_program_gl_handle);
             check_gl_errors();
 
