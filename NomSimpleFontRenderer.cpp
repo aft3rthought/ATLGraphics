@@ -58,7 +58,7 @@ namespace atl_graphics_namespace_config
                     {
                         // Index data:
                         {
-                            unsigned l_vertIdx = 0;
+                            unsigned short l_vertIdx = 0;
                             for(unsigned int idx = 0; idx < pcsm_maxIndicesPerPass; idx += pcsm_indicesPerCharacter)
                             {
                                 pm_indexData[idx + 0] = l_vertIdx + 0;

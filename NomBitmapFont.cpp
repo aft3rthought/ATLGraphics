@@ -54,7 +54,7 @@ namespace atl_graphics_namespace_config
                 }
                 else if(internal_loaded_file_data.status() == file_data_status::ready)
                 {
-                    atl::bits_in l_deserializer(internal_loaded_file_data.data().data(), internal_loaded_file_data.data().size());
+                    atl::bits_in l_deserializer(internal_loaded_file_data.data().data(), atl::integer<int>(internal_loaded_file_data.data().size()));
 
                     struct l_CharInfo
                     {
@@ -72,7 +72,7 @@ namespace atl_graphics_namespace_config
                     int32_t fontSheetHeight = 1 << l_deserializer.read_ranged_int(0, 12);
 
                     // Read font size:
-                    int32_t l_fontSize = l_deserializer.read_uint32_var_bit(7);
+                    int32_t l_fontSize = atl::integer<int>(l_deserializer.read_uint32_var_bit(7));
 
                     // Read space char size:
                     float l_spaceCharSize = l_deserializer.read_float();
@@ -86,7 +86,7 @@ namespace atl_graphics_namespace_config
                     while(l_numCharacters-- > 0)
                     {
                         l_charInfos.emplace_back();
-                        l_charInfos.back().m_char = l_deserializer.read_byte();
+                        l_charInfos.back().m_char = atl::ignore_sign<char>(l_deserializer.read_byte());
                         l_charInfos.back().m_advance = l_deserializer.read_float();
                         auto l_offset_x = l_deserializer.read_float();
                         auto l_offset_y = l_deserializer.read_float();
@@ -120,7 +120,7 @@ namespace atl_graphics_namespace_config
                                                        &l_fontSheetWidth,
                                                        &l_fontSheetHeight,
                                                        l_pngData,
-                                                       l_pngSize,
+                                                       atl::integer<size_t>(l_pngSize),
                                                        LCT_GREY,
                                                        8);
 
@@ -147,8 +147,8 @@ namespace atl_graphics_namespace_config
                         glTexImage2D(GL_TEXTURE_2D,
                                      0,
                                      GL_RED_NOM,
-                                     l_fontSheetWidth,
-                                     l_fontSheetHeight,
+                                     atl::integer<GLsizei>(l_fontSheetWidth),
+                                     atl::integer<GLsizei>(l_fontSheetHeight),
                                      0,
                                      GL_RED_NOM,
                                      GL_UNSIGNED_BYTE,
