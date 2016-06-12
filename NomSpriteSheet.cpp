@@ -125,8 +125,8 @@ namespace atl_graphics_namespace_config
                         unsigned int imageWidthOut;
                         unsigned int imageHeightOut;
                         unsigned int decodeError = lodepng_decode32(&imageDataOut, &imageWidthOut, &imageHeightOut, l_pngBytes, numPNGBytes);
-                        SGFatalErrorIf(decodeError > 0, "Couldn't decode PNG in sprite sheet");
-                        SGFatalErrorIf(imageWidthOut != sheetWidth || imageHeightOut != sheetHeight, "PNG in sprite sheet of unexpected size");
+                        atl_fatal_if(decodeError > 0, "Couldn't decode PNG in sprite sheet");
+                        atl_fatal_if(imageWidthOut != sheetWidth || imageHeightOut != sheetHeight, "PNG in sprite sheet of unexpected size");
 
                         // Allocate GL resource:
                         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

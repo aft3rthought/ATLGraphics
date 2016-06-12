@@ -75,7 +75,7 @@ namespace atl
             glGetProgramInfoLog(prog, logLength, &logLength, log);
             printf("Program link log:\n%s", log);
             free(log);
-            SGDebugBreak("Encountered shader compilation warning/error!");
+            atl_fatal("Encountered shader compilation warning/error!");
         }
 #endif
 

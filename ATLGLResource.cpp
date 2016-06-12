@@ -7,13 +7,13 @@ namespace atl_graphics_namespace_config
 {
     base_resource::~base_resource()
     {
-        SGDebugBreakIf(valid(), "GL resource not set to invalid before owner is destroyed! Is a resource being lost?");
+        atl_fatal_if(valid(), "GL resource not set to invalid before owner is destroyed! Is a resource being lost?");
     }
 
 #ifdef DEBUG
     base_resource::operator GLuint () const
     {
-        atl_assert_debug(valid(), "Accesing invalid GL resource");
+        atl_fatal_assert(valid(), "Accesing invalid GL resource");
         return internal_gl_handle;
     }
 #endif
@@ -27,7 +27,7 @@ namespace atl_graphics_namespace_config
     void texture_resource::free()
     {
 #ifdef DEBUG
-        atl_assert_debug(glIsTexture(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_fatal_assert(glIsTexture(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteTextures(1, &internal_gl_handle);
         check_gl_errors();
@@ -43,7 +43,7 @@ namespace atl_graphics_namespace_config
     void shader_program_resource::free()
     {
 #ifdef DEBUG
-        atl_assert_debug(glIsProgram(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_fatal_assert(glIsProgram(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteProgram(internal_gl_handle);
         check_gl_errors();
@@ -59,7 +59,7 @@ namespace atl_graphics_namespace_config
     void buffer_resource::free()
     {
 #ifdef DEBUG
-        atl_assert_debug(glIsBuffer(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_fatal_assert(glIsBuffer(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         glDeleteBuffers(1, &internal_gl_handle);
         check_gl_errors();
@@ -139,7 +139,7 @@ namespace atl_graphics_namespace_config
 
 #ifdef PLATFORM_IOS
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayOES(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_fatal_assert(glIsVertexArrayOES(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         if(internal_gl_handle != 0)
         {
@@ -153,7 +153,7 @@ namespace atl_graphics_namespace_config
 
 #ifdef PLATFORM_OSX
 #ifdef DEBUG
-        SGDebugBreakIf(!glIsVertexArrayAPPLE(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
+        atl_fatal_assert(glIsVertexArrayAPPLE(internal_gl_handle), "Resource isn't valid when calling free, is everything OK?");
 #endif
         if(internal_gl_handle != 0)
         {

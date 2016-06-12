@@ -62,7 +62,7 @@ namespace atl_graphics_namespace_config
                     if(!compile_shader(internal_vertex_shader_file.data(), &l_vertex_shader, GL_VERTEX_SHADER) ||
                        !compile_shader(internal_fragment_shader_file.data(), &l_fragment_shader, GL_FRAGMENT_SHADER))
                     {
-                        atl_break_debug("Shader failed to compile");
+                        atl_fatal("Shader failed to compile");
                         internal_status = sprite_renderer_status::failed;
                     }
                     else
@@ -111,7 +111,7 @@ namespace atl_graphics_namespace_config
                         }
                         else
                         {
-                            atl_break_debug("Shader failed to link");
+                            atl_fatal("Shader failed to link");
                             pm_program.free();
                             internal_status = sprite_renderer_status::failed;
                         }

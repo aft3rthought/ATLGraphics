@@ -28,31 +28,31 @@ namespace atl_graphics_namespace_config
     
     template <int BPP>
     const unsigned char * getImagePixelPtr(const unsigned char * in_data, unsigned int in_x, unsigned int in_y, unsigned int in_width, unsigned int in_height) {
-        SGDebugBreakIf(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
+        atl_fatal_if(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
         return &in_data[in_y * in_width * BPP + in_x * BPP];
     };
 
     template <int BPP, int ByteIdx>
     unsigned char getImagePixelVal(const unsigned char * in_data, unsigned int in_x, unsigned int in_y, unsigned int in_width, unsigned int in_height) {
-        SGDebugBreakIf(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
+        atl_fatal_if(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
         return in_data[in_y * in_width * BPP + in_x * BPP + ByteIdx];
     };
     
     template <int BPP>
     unsigned char * getEditableImagePixelPtr(unsigned char * in_data, unsigned int in_x, unsigned int in_y, unsigned int in_width, unsigned int in_height) {
-        SGDebugBreakIf(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
+        atl_fatal_if(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
         return &in_data[in_y * in_width * BPP + in_x * BPP];
     };
     
     template <int BPP, int ByteIdx>
     unsigned char & getEditableImagePixelVal(unsigned char * in_data, unsigned int in_x, unsigned int in_y, unsigned int in_width, unsigned int in_height) {
-        SGDebugBreakIf(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
+        atl_fatal_if(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
         return in_data[in_y * in_width * BPP + in_x * BPP + ByteIdx];
     };
     
     template <int BPP>
     BMPPixel getEditableImagePixel(unsigned char * in_data, unsigned int in_x, unsigned int in_y, unsigned int in_width, unsigned int in_height) {
-        SGDebugBreakIf(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
+        atl_fatal_if(in_x >= in_width && in_y >= in_height, "Out of bounds access to image");
         return BMPPixel(getEditableImagePixelPtr<BPP>(in_data, in_x, in_y, in_width, in_height));
     };
     

@@ -45,7 +45,7 @@ namespace atl_graphics_namespace_config
         GLenum atl_gl_err_define_local = GL_NO_ERROR;
         while((atl_gl_err_define_local = glGetError()) != GL_NO_ERROR)
         {
-            atl_break_debug("gl error detected");
+            atl_fatal("gl error detected");
 #ifdef DEBUG
             printf("atl::graphics - GL ERROR DETECTED: %i\n", atl_gl_err_define_local);
 #endif

@@ -47,7 +47,7 @@ namespace atl_graphics_namespace_config
                     if(!compile_shader(internal_vertex_shader_file.data(), &l_vertex_shader, GL_VERTEX_SHADER) ||
                        !compile_shader(internal_fragment_shader_file.data(), &l_fragment_shader, GL_FRAGMENT_SHADER))
                     {
-                        atl_break_debug("Shader failed to compile");
+                        atl_fatal("Shader failed to compile");
                         internal_status = flat_color_geometry_renderer_status::failed;
                     }
                     else
@@ -83,7 +83,7 @@ namespace atl_graphics_namespace_config
                         }
                         else
                         {
-                            atl_break_debug("Shader failed to link");
+                            atl_fatal("Shader failed to link");
                             internal_program_gl_handle.free();
                             internal_status = flat_color_geometry_renderer_status::failed;
                         }
@@ -139,8 +139,8 @@ namespace atl_graphics_namespace_config
                                                       const std::vector<Tri> & in_triangles,
                                                       const bool in_useStaticBuffers)
     {
-        atl_assert_debug(in_vertexBuffer.valid(), "Allocate this ahead of time!");
-        atl_assert_debug(in_indexBuffer.valid(), "Allocate this ahead of time!");
+        atl_fatal_assert(in_vertexBuffer.valid(), "Allocate this ahead of time!");
+        atl_fatal_assert(in_indexBuffer.valid(), "Allocate this ahead of time!");
 
         in_vertexArray.bind();
 
