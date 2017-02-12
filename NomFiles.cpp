@@ -2,6 +2,10 @@
 
 #include "./NomFiles.h"
 
+#ifdef PLATFORM_IOS
+#include <fstream>
+#endif
+
 #ifdef PLATFORM_OSX
 #include <fstream>
 #endif
@@ -42,6 +46,28 @@ namespace atl
            internal_status == file_data_status::freed)
         {
             internal_status = file_data_status::loading;
+            
+#ifdef PLATFORM_IOS
+            std::ifstream file(in_application_folder.rootDirectory() + "/" + in_file_path, std::ios::in);
+            internal_status = file_data_status::error;
+            if(file.good())
+            {
+                std::streamsize size = 0;
+                if(file.seekg(0, std::ios::end).good())
+                {
+                    size = file.tellg();
+                    
+                    if(file.seekg(0, std::ios::beg).good())
+                    {
+                        size -= file.tellg();
+                        
+                        internal_data.resize(size);
+                        file.read((char *)internal_data.data(), size);
+                        internal_status = file_data_status::ready;
+                    }
+                }
+            }
+#endif
             
 #ifdef PLATFORM_OSX
             std::ifstream file(in_application_folder.rootDirectory() + "/" + in_file_path, std::ios::in);
