@@ -75,7 +75,7 @@ namespace atl_graphics_namespace_config
 #ifdef PLATFORM_IOS
         glGenVertexArraysOES(1, &internal_gl_handle);
         check_gl_errors();
-        return pm_resource != 0;
+        return internal_gl_handle != 0;
 #endif
 
 #ifdef PLATFORM_OSX
