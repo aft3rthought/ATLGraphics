@@ -170,8 +170,8 @@ namespace atl_graphics_namespace_config
         float l_sin = sinf(in_spriteRotation);
         float l_cos = cosf(in_spriteRotation);
 
-        auto l_rotate = [](atl::point2f & l_pt, float l_sin, float l_cos) {
-            l_pt = atl::point2f(l_pt.x * l_cos - l_pt.y * l_sin, l_pt.x * l_sin + l_pt.y * l_cos);
+        auto l_rotate = [](atl::point2f & lambda_pt, float lambda_sin, float lambda_cos) {
+            lambda_pt = atl::point2f(lambda_pt.x * lambda_cos - lambda_pt.y * lambda_sin, lambda_pt.x * lambda_sin + lambda_pt.y * lambda_cos);
         };
 
         l_rotate(l_corners.c1, l_sin, l_cos);
