@@ -1,7 +1,8 @@
 
 
 #include "NomSpriteSheet.h"
-#include "ATLUtil/serialize.h"
+#include "ATLUtil/numeric_util.h"
+#include "ATLUtil/bit_string.h"
 #include "ATLUtil/debug_break.h"
 #include "lodepng.h"
 #include "ATF/NomRenderingHeaders.h"
@@ -45,14 +46,16 @@ namespace atl_graphics_namespace_config
                 }
                 else if(internal_loaded_file_data.status() == file_data_status::ready)
                 {
-                    bits_in l_stream;
-                    l_stream.attach_bytes(internal_loaded_file_data.data().data(), (int)internal_loaded_file_data.data().size());
-
+                    auto file_data = internal_loaded_file_data.data();
+                    atl::input_bit_string_type bit_string(file_data.data(), file_data.data() + file_data.size());
+                    
                     // Load frames:
                     glActiveTexture(GL_TEXTURE0);
 
-                    int32_t numSheets = l_stream.read_uint32_var_bit(3);
-                    int32_t totalSprites = l_stream.read_uint32_var_bit(7);
+                    uint32_t numSheets;
+                    atl::bit_string_read_chunked_integer<uint32_t>(bit_string, numSheets, 3);
+                    uint32_t totalSprites;
+                    atl::bit_string_read_chunked_integer<uint32_t>(bit_string, totalSprites, 7);
 
                     sprites.resize(totalSprites);
                     textures.resize(numSheets);
@@ -63,24 +66,30 @@ namespace atl_graphics_namespace_config
                         glGenTextures(1, &sheetId);
                         check_gl_errors();
 
-                        int32_t sheetWidth = 1 << l_stream.read_ranged_int(0, 12);
-                        int32_t sheetHeight = 1 << l_stream.read_ranged_int(0, 12);
+                        uint32_t fontSheetWidthPower, fontSheetHeightPower;
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetWidthPower, 0, 12);
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetHeightPower, 0, 12);
+                        uint32_t sheetWidth = 1 << fontSheetWidthPower;
+                        uint32_t sheetHeight = 1 << fontSheetHeightPower;
 
                         atl::size2f sheetSize(sheetWidth, sheetHeight);
 
-                        int32_t sheetSprites = l_stream.read_ranged_int(0, totalSprites);
+                        uint32_t sheetSprites;
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, sheetSprites, 0, totalSprites);
                         while(sheetSprites-- > 0)
                         {
                             // Deserialize the frame index:
-                            int32_t spriteIndex = l_stream.read_ranged_int(0, totalSprites - 1);
+                            uint32_t spriteIndex;
+                            atl::bit_string_read_ranged_integer<uint32_t>(bit_string, spriteIndex, 0, totalSprites - 1);
 
                             // Deserialize the texture coordinates:
                             atl::box2f l_texCoords;
                             {
-                                int32_t l_texT = l_stream.read_ranged_int(0, sheetHeight);
-                                int32_t l_texR = l_stream.read_ranged_int(0, sheetWidth);
-                                int32_t l_texB = l_stream.read_ranged_int(0, sheetHeight);
-                                int32_t l_texL = l_stream.read_ranged_int(0, sheetWidth);
+                                uint32_t l_texT, l_texR, l_texB, l_texL;
+                                atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_texT, 0, sheetHeight);
+                                atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_texR, 0, sheetWidth);
+                                atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_texB, 0, sheetHeight);
+                                atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_texL, 0, sheetWidth);
 
                                 if(l_texR - l_texL == 1)
                                 {
@@ -104,11 +113,8 @@ namespace atl_graphics_namespace_config
                             }
 
                             // Deserialize the drawn area:
-                            auto l_area_t = l_stream.read_float();
-                            auto l_area_r = l_stream.read_float();
-                            auto l_area_b = l_stream.read_float();
-                            auto l_area_l = l_stream.read_float();
-                            atl::box2f l_area(l_area_t, l_area_r, l_area_b, l_area_l);
+                            atl::box2f l_area;
+                            atl::bit_string_read_values(bit_string, l_area.t, l_area.r, l_area.b, l_area.l);
 
                             sprites[spriteIndex].set(sheetId, l_texCoords, l_area);
                         }
@@ -116,10 +122,12 @@ namespace atl_graphics_namespace_config
                         // Decode PNG data and upload to card:
                         glBindTexture(GL_TEXTURE_2D, sheetId);
 
-                        int32_t numPNGBytes = l_stream.read_int32();
-                        l_stream.skip_to_next_byte();
-                        const unsigned char * l_pngBytes = l_stream.current_data_pointer();
-                        l_stream.advance_data_pointer(numPNGBytes);
+                        int32_t numPNGBytesInt32;
+                        atl::bit_string_read_value(bit_string, numPNGBytesInt32);
+                        size_t numPNGBytes = numPNGBytesInt32;
+                        atl::bit_string_skip_to_next_byte(bit_string);
+                        const unsigned char * l_pngBytes = bit_string.ptr;
+                        bit_string.ptr += numPNGBytes;
 
                         unsigned char * imageDataOut = nullptr;
                         unsigned int imageWidthOut;
@@ -134,8 +142,8 @@ namespace atl_graphics_namespace_config
                         glTexImage2D(GL_TEXTURE_2D,
                                         0,
                                         GL_RGBA,
-                                        sheetWidth,
-                                        sheetHeight,
+                                        atl::integer_cast<GLsizei>(sheetWidth, [](){}),
+                                        atl::integer_cast<GLsizei>(sheetHeight, [](){}),
                                         0,
                                         GL_RGBA,
                                         GL_UNSIGNED_BYTE,

@@ -1,6 +1,7 @@
 #include "./NomBitmapFont.h"
 
-#include "ATLUtil/serialize.h"
+#include "ATLUtil/numeric_util.h"
+#include "ATLUtil/bit_string.h"
 #include "ATF/lodepng.h"
 #include "ATF/NomImageLoading.h"
 #include "ATF/NomFiles.h"
@@ -54,29 +55,36 @@ namespace atl_graphics_namespace_config
                 }
                 else if(internal_loaded_file_data.status() == file_data_status::ready)
                 {
-                    atl::bits_in l_deserializer(internal_loaded_file_data.data().data(), atl::integer<int>(internal_loaded_file_data.data().size()));
-
+                    auto file_data = internal_loaded_file_data.data();
+                    atl::input_bit_string_type bit_string(file_data.data(), file_data.data() + file_data.size());
+                    
                     struct l_CharInfo
                     {
                         char m_char;
                         float m_advance;
                         atl::point2f m_offset;
                         atl::size2f m_size;
-                        int m_sheetXPos;
-                        int m_sheetYPos;
-                        int m_sheetWidth;
-                        int m_sheetHeight;
+                        uint32_t m_sheetXPos;
+                        uint32_t m_sheetYPos;
+                        uint32_t m_sheetWidth;
+                        uint32_t m_sheetHeight;
                     };
 
-                    int32_t fontSheetWidth = 1 << l_deserializer.read_ranged_int(0, 12);
-                    int32_t fontSheetHeight = 1 << l_deserializer.read_ranged_int(0, 12);
+                    uint32_t fontSheetWidthPower, fontSheetHeightPower;
+                    atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetWidthPower, 0, 12);
+                    atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetHeightPower, 0, 12);
+                    uint32_t fontSheetWidth = 1 << fontSheetWidthPower;
+                    uint32_t fontSheetHeight = 1 << fontSheetHeightPower;
 
                     // Read font size:
-                    int32_t l_fontSize = atl::integer<int>(l_deserializer.read_uint32_var_bit(7));
+                    int32_t l_fontSize;
+                    atl::bit_string_read_chunked_integer<int32_t>(bit_string, l_fontSize, 7);
 
                     // Read space char size:
-                    float l_spaceCharSize = l_deserializer.read_float();
-                    uint32_t l_numCharacters = l_deserializer.read_uint32_var_bit(7);
+                    float l_spaceCharSize;
+                    atl::bit_string_read_value(bit_string, l_spaceCharSize);
+                    uint32_t l_numCharacters;
+                    atl::bit_string_read_chunked_integer<uint32_t>(bit_string, l_numCharacters, 7);
 
                     std::vector<l_CharInfo> l_charInfos;
                     l_charInfos.reserve(l_numCharacters);
@@ -86,18 +94,16 @@ namespace atl_graphics_namespace_config
                     while(l_numCharacters-- > 0)
                     {
                         l_charInfos.emplace_back();
-                        l_charInfos.back().m_char = atl::ignore_sign<char>(l_deserializer.read_byte());
-                        l_charInfos.back().m_advance = l_deserializer.read_float();
-                        auto l_offset_x = l_deserializer.read_float();
-                        auto l_offset_y = l_deserializer.read_float();
-                        l_charInfos.back().m_offset.set(l_offset_x, l_offset_y);
-                        auto l_size_x = l_deserializer.read_float();
-                        auto l_size_y = l_deserializer.read_float();
-                        l_charInfos.back().m_size = atl::size2f(l_size_x, l_size_y);
-                        l_charInfos.back().m_sheetXPos = l_deserializer.read_ranged_int(0, fontSheetWidth);
-                        l_charInfos.back().m_sheetYPos = l_deserializer.read_ranged_int(0, fontSheetHeight);
-                        l_charInfos.back().m_sheetWidth = l_deserializer.read_ranged_int(0, fontSheetWidth);
-                        l_charInfos.back().m_sheetHeight = l_deserializer.read_ranged_int(0, fontSheetHeight);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_char);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_advance);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_offset.x);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_offset.y);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_size.w);
+                        atl::bit_string_read_value(bit_string, l_charInfos.back().m_size.h);
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_charInfos.back().m_sheetXPos, 0, fontSheetWidth);
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_charInfos.back().m_sheetYPos, 0, fontSheetHeight);
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_charInfos.back().m_sheetWidth, 0, fontSheetWidth);
+                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, l_charInfos.back().m_sheetHeight, 0, fontSheetHeight);
 
                         l_minBoundsY = std::min(l_minBoundsY, l_charInfos.back().m_offset.y);
                         l_maxBoundsY = std::max(l_maxBoundsY, l_charInfos.back().m_offset.y + l_charInfos.back().m_size.h);
@@ -108,10 +114,12 @@ namespace atl_graphics_namespace_config
                         l_charInfos.back().m_size.h += 64.f / 256.f;
                     }
 
-                    int32_t l_pngSize = l_deserializer.read_int32();
-                    l_deserializer.skip_to_next_byte();
-                    const unsigned char * l_pngData = (const unsigned char *)l_deserializer.current_data_pointer();
-                    l_deserializer.advance_data_pointer(l_pngSize);
+                    int32_t l_png_size_int32;
+                    atl::bit_string_read_value(bit_string, l_png_size_int32);
+                    size_t l_pngSize = atl::integer_cast<size_t>(l_png_size_int32, [](){});
+                    atl::bit_string_skip_to_next_byte(bit_string);
+                    auto l_pngData = bit_string.ptr;
+                    bit_string.ptr += l_pngSize;
 
                     // Read png:
                     unsigned char * l_fontSheetData;
@@ -120,7 +128,7 @@ namespace atl_graphics_namespace_config
                                                        &l_fontSheetWidth,
                                                        &l_fontSheetHeight,
                                                        l_pngData,
-                                                       atl::integer<size_t>(l_pngSize),
+                                                       l_pngSize,
                                                        LCT_GREY,
                                                        8);
 
@@ -147,8 +155,8 @@ namespace atl_graphics_namespace_config
                         glTexImage2D(GL_TEXTURE_2D,
                                      0,
                                      GL_RED_NOM,
-                                     atl::integer<GLsizei>(l_fontSheetWidth),
-                                     atl::integer<GLsizei>(l_fontSheetHeight),
+                                     atl::integer_cast<GLsizei>(l_fontSheetWidth, [](){}),
+                                     atl::integer_cast<GLsizei>(l_fontSheetHeight, [](){}),
                                      0,
                                      GL_RED_NOM,
                                      GL_UNSIGNED_BYTE,
