@@ -5,16 +5,11 @@
 #include <vector>
 #include "ATF/NomSpriteFrame.h"
 #include "ATF/NomFiles.h"
+#include "ATF/texture_filtering_mode.h"
 
 namespace atl_graphics_namespace_config
 {
     struct application_folder;
-
-    enum class texture_filtering_mode
-    {
-        nearest,
-        linear,
-    };
 
     enum class sprite_sheet_status
     {
