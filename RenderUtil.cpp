@@ -22,7 +22,7 @@ namespace atl
                 
                 modified_data.reserve(modified_data.size() + l_shader_prefix_len);
                 std::move(modified_data.begin(), modified_data.end(), modified_data.begin() + l_shader_prefix_len);
-                for(int i = 0; i < l_shader_prefix_len; i++)
+                for(size_t i = 0; i < l_shader_prefix_len; i++)
                     modified_data[i] = l_shader_prefix[i];
             }
 #endif
