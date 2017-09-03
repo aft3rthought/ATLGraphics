@@ -18,9 +18,12 @@ namespace atl_graphics_namespace_config
         shared_renderer_state & renderer_state;
 
     public:
+        viewport(shared_renderer_state & in_renderer_state);
         viewport(const atl::box2f & in_trim_area,
                  const atl::stage & in_stage,
                  shared_renderer_state & in_renderer_state);
         ~viewport();
+        void acquire(const atl::box2f & in_trim_area,
+                     const atl::stage & in_stage);
     };
 }
