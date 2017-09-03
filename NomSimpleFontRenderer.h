@@ -23,6 +23,29 @@ namespace atl_graphics_namespace_config
         failed
     };
 
+    enum class font_layout_chunk_linebreak_type
+    {
+        no_line_break,
+        line_break_allowed,
+        must_line_break
+    };
+    
+    struct layout_glyph_type
+    {
+        atl::size2f size;
+        float advance;
+        atl::point2f offset;
+        font_layout_chunk_linebreak_type line_break;
+        
+        atl::box2f result_bounds;
+    };
+    
+    void glyph_layout(const atl::box2f & l_drawArea,
+                      atl::anchoring l_textAnchoring,
+                      float in_numLines,
+                      layout_glyph_type * in_data_begin,
+                      layout_glyph_type * in_data_end);
+
     class simple_font_renderer
     {
     private:
@@ -34,9 +57,6 @@ namespace atl_graphics_namespace_config
         {
             UNIFORM_SCREEN_DIM,
             UNIFORM_TRANSLATION,
-            UNIFORM_EDGES,
-            UNIFORM_COLORS,
-            UNIFORM_ANTIALIASING_RADIUS,
             UNIFORM_SAMPLER_DISTANCE_FIELD,
             NUM_UNIFORMS
         };
@@ -46,7 +66,9 @@ namespace atl_graphics_namespace_config
         {
             ATTRIBUTE_VERT_POSITION,
             ATTRIBUTE_VERT_TEX_COORD,
-            ATTRIBUTE_VERT_INDEX,
+            ATTRIBUTE_VERT_COLOR,
+            ATTRIBUTE_VERT_EDGE,
+            ATTRIBUTE_VERT_RADIUS,
             NUM_ATTRIBUTES
         };
 
@@ -63,7 +85,12 @@ namespace atl_graphics_namespace_config
             GLfloat y;
             GLfloat u;
             GLfloat v;
-            GLfloat index;
+            GLfloat r;
+            GLfloat g;
+            GLfloat b;
+            GLfloat a;
+            GLfloat edge;
+            GLfloat radius;
         };
         Vertex pm_vertexData[pcsm_maxVertsPerPass];
         GLushort pm_indexData[pcsm_maxIndicesPerPass];
@@ -98,11 +125,5 @@ namespace atl_graphics_namespace_config
                     atl::anchoring in_textAnchoring,
                     const std::string & in_stringToDraw,
                     int in_numLines = 1);
-
-        atl::point2f drawCharacter(const simple_font_profile & in_profile,
-                                   const scalable_font & l_font,
-                                   const char in_character,
-                                   const atl::point2f & in_position,
-                                   const float in_size);
     };
 }

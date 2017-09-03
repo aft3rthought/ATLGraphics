@@ -13,17 +13,12 @@ namespace atl_graphics_namespace_config
         const static atl::color pcsm_defaultColor;
 
     public:
+        float df_radius[4];
+        bool scale_radius_to_view[4];
         float m_edges[4];
         atl::color m_colors[4];
 
-        simple_font_profile(float in_edge1,
-                             const atl::color & in_color1,
-                             float in_edge2 = 1.f,
-                             const atl::color & in_color2 = pcsm_defaultColor,
-                             float in_edge3 = 1.f,
-                             const atl::color & in_color3 = pcsm_defaultColor,
-                             float in_edge4 = 1.f,
-                             const atl::color & in_color4 = pcsm_defaultColor);
+        simple_font_profile();
 
         void colorLerp(atl::color in_color);
         void colorMult(atl::color in_color);

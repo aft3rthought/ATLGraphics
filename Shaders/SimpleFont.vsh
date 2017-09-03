@@ -7,10 +7,15 @@ uniform vec2 u_translation;
 
 attribute vec2 v_position;
 attribute lowp vec2 v_texCoord;
-attribute mediump float v_index;
+attribute lowp vec4 v_color;
+attribute mediump float v_edge;
+attribute mediump float v_radius;
 
 varying lowp vec2 fv_texCoord;
-varying mediump float fv_index;
+varying lowp vec4 fv_color;
+varying mediump float fv_edge;
+varying mediump float fv_radius;
+
 void main()
 {
     // Translate into screen coordinates:
@@ -22,5 +27,7 @@ void main()
 
     // Per-vertex pass through:
     fv_texCoord = v_texCoord;
-    fv_index = v_index;
+    fv_color = v_color;
+    fv_edge = v_edge;
+    fv_radius = v_radius;
 }

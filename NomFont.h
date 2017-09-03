@@ -17,7 +17,7 @@ namespace atl_graphics_namespace_config
     struct scalable_font_char
     {
     public:
-        char m_char;
+        uint32_t m_char;
         float m_advance;
         atl::point2f m_offset;
         atl::size2f m_size;
@@ -33,13 +33,13 @@ namespace atl_graphics_namespace_config
     struct scalable_font_data
     {
         std::string m_fontName;
-        float m_spaceCharacterSize;
         texture_resource m_texture;
         std::vector<scalable_font_char> m_fontChars;
         atl::point2f m_pixTexelStride;
         float m_boundsYMin;
         float m_boundsYMax;
         float m_lineHeight;
+        float field_bloom;
     };
 
     enum class scalable_font_status

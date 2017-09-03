@@ -64,7 +64,7 @@ namespace atl_graphics_namespace_config
 
                         struct l_CharInfo
                         {
-                            char m_char;
+                            uint32_t m_char;
                             float m_advance;
                             atl::point2f m_offset;
                             atl::size2f m_size;
@@ -74,16 +74,17 @@ namespace atl_graphics_namespace_config
                             uint32_t m_sheetHeight;
                         };
 
-                        uint32_t fontSheetWidthPower, fontSheetHeightPower;
-                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetWidthPower, 0, 12);
-                        atl::bit_string_read_ranged_integer<uint32_t>(bit_string, fontSheetHeightPower, 0, 12);
+                        float field_bloom = 0.f;
+                        atl::bit_string_read_value(bit_string, field_bloom);
+                        
+                        int fontSheetWidthPower, fontSheetHeightPower;
+                        atl::bit_string_read_ranged_integer<int>(bit_string, fontSheetWidthPower, 0, 12);
+                        atl::bit_string_read_ranged_integer<int>(bit_string, fontSheetHeightPower, 0, 12);
                         uint32_t fontSheetWidth = 1 << fontSheetWidthPower;
                         uint32_t fontSheetHeight = 1 << fontSheetHeightPower;
                         
-                        float l_spaceCharSize;
-                        atl::bit_string_read_value(bit_string, l_spaceCharSize);
-                        uint32_t l_numCharacters;
-                        atl::bit_string_read_chunked_integer<uint32_t>(bit_string, l_numCharacters, 7);
+                        int l_numCharacters;
+                        atl::bit_string_read_chunked_integer<int>(bit_string, l_numCharacters, 7);
 
                         std::vector<l_CharInfo> l_charInfos;
                         l_charInfos.reserve(l_numCharacters);
@@ -93,7 +94,7 @@ namespace atl_graphics_namespace_config
                         while(l_numCharacters-- > 0)
                         {
                             l_charInfos.emplace_back();
-                            atl::bit_string_read_value(bit_string, l_charInfos.back().m_char);
+                            atl::bit_string_read_chunked_integer<uint32_t>(bit_string, l_charInfos.back().m_char, 8);
                             atl::bit_string_read_value(bit_string, l_charInfos.back().m_advance);
                             atl::bit_string_read_value(bit_string, l_charInfos.back().m_offset.x);
                             atl::bit_string_read_value(bit_string, l_charInfos.back().m_offset.y);
@@ -106,11 +107,6 @@ namespace atl_graphics_namespace_config
 
                             l_minBoundsY = std::min(l_minBoundsY, l_charInfos.back().m_offset.y);
                             l_maxBoundsY = std::max(l_maxBoundsY, l_charInfos.back().m_offset.y + l_charInfos.back().m_size.h);
-
-                            l_charInfos.back().m_offset.x -= 32.f / 256.f;
-                            l_charInfos.back().m_offset.y -= 32.f / 256.f;
-                            l_charInfos.back().m_size.w += 64.f / 256.f;
-                            l_charInfos.back().m_size.h += 64.f / 256.f;
                         }
 
                         int32_t l_pngSizeInt32;
@@ -139,11 +135,11 @@ namespace atl_graphics_namespace_config
                         {
                             // Create font entry:
                             internal_font_data.m_fontName = internal_file_name;
+                            internal_font_data.field_bloom = field_bloom;
                             internal_font_data.m_boundsYMax = l_maxBoundsY;
                             internal_font_data.m_boundsYMin = l_minBoundsY;
                             internal_font_data.m_lineHeight = 1.1f;
                             internal_font_data.m_pixTexelStride = atl::point2f(1.f / l_fontSheetWidth, 1.f / l_fontSheetHeight);
-                            internal_font_data.m_spaceCharacterSize = l_spaceCharSize;
 
                             // Upload font sheet to video card:
                             internal_font_data.m_texture.alloc();

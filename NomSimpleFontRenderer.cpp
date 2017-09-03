@@ -103,7 +103,9 @@ namespace atl_graphics_namespace_config
                         // This needs to be done prior to linking.
                         glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_POSITION, "v_position");
                         glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_TEX_COORD, "v_texCoord");
-                        glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_INDEX, "v_index");
+                        glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_COLOR, "v_color");
+                        glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_EDGE, "v_edge");
+                        glBindAttribLocation(pm_glProgram, ATTRIBUTE_VERT_RADIUS, "v_radius");
 
                         // Link program.
                         if(link_program(pm_glProgram))
@@ -111,9 +113,6 @@ namespace atl_graphics_namespace_config
                             // Get uniform locations.
                             pm_shaderUniforms[UNIFORM_SCREEN_DIM] = glGetUniformLocation(pm_glProgram, "u_screenBounds");
                             pm_shaderUniforms[UNIFORM_TRANSLATION] = glGetUniformLocation(pm_glProgram, "u_translation");
-                            pm_shaderUniforms[UNIFORM_EDGES] = glGetUniformLocation(pm_glProgram, "u_edges");
-                            pm_shaderUniforms[UNIFORM_COLORS] = glGetUniformLocation(pm_glProgram, "u_colors");
-                            pm_shaderUniforms[UNIFORM_ANTIALIASING_RADIUS] = glGetUniformLocation(pm_glProgram, "u_antialiasingRadius");
 
                             pm_shaderUniforms[UNIFORM_SAMPLER_DISTANCE_FIELD] = glGetUniformLocation(pm_glProgram, "s_distanceField");
 
@@ -169,8 +168,14 @@ namespace atl_graphics_namespace_config
         glEnableVertexAttribArray(ATTRIBUTE_VERT_TEX_COORD);
         glVertexAttribPointer(ATTRIBUTE_VERT_TEX_COORD, 2, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(Vertex, u));
 
-        glEnableVertexAttribArray(ATTRIBUTE_VERT_INDEX);
-        glVertexAttribPointer(ATTRIBUTE_VERT_INDEX, 1, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(Vertex, index));
+        glEnableVertexAttribArray(ATTRIBUTE_VERT_COLOR);
+        glVertexAttribPointer(ATTRIBUTE_VERT_COLOR, 4, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(Vertex, r));
+        
+        glEnableVertexAttribArray(ATTRIBUTE_VERT_EDGE);
+        glVertexAttribPointer(ATTRIBUTE_VERT_EDGE, 1, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(Vertex, edge));
+
+        glEnableVertexAttribArray(ATTRIBUTE_VERT_RADIUS);
+        glVertexAttribPointer(ATTRIBUTE_VERT_RADIUS, 1, GL_FLOAT, GL_FALSE, atl_graphics_vertex_offset(Vertex, radius));
     }
 
     void simple_font_renderer::render(const simple_font_profile & in_profile,
@@ -274,7 +279,16 @@ namespace atl_graphics_namespace_config
                 {
                     if(*l_str == ' ')
                     {
-                        float l_scaledSpaceAdvance = l_font.m_spaceCharacterSize * l_subStringScaleValue * l_kerningScaleValue;
+                        float l_scaledSpaceAdvance = 1.f;
+                        for(unsigned int idx_fontChar = 0; idx_fontChar < l_font.m_fontChars.size(); idx_fontChar++)
+                        {
+                            const auto & l_fontChar = l_font.m_fontChars[idx_fontChar];
+                            if(l_fontChar.m_char == *l_str)
+                            {
+                                l_scaledSpaceAdvance = l_fontChar.m_advance * l_subStringScaleValue * l_kerningScaleValue;
+                                break;
+                            }
+                        }
 
                         l_whitespaceUnits.back().m_whitespaceAdvance = l_scaledSpaceAdvance;
 
@@ -444,7 +458,7 @@ namespace atl_graphics_namespace_config
                 }
             }
         }
-
+        
         // Now place drawn bounds in the draw area:
         l_drawBounds.x.scale(l_drawScale);
         l_drawBounds.y.scale(l_drawScale);
@@ -470,7 +484,7 @@ namespace atl_graphics_namespace_config
 
         // Apply gravity:
         l_drawBounds = l_drawArea.get_sub_bounds_with_size(l_drawBounds.size(), l_textAnchoring);
-
+        
         // Now draw string:
         {
             simple_font_renderer::Vertex * l_vertexData = pm_vertexData;
@@ -479,60 +493,59 @@ namespace atl_graphics_namespace_config
 
             for(int idx_layer = 0; idx_layer < pcsm_maxLayersPerPass; idx_layer++)
             {
-                for(const auto & l_whitespaceUnit : l_whitespaceUnits)
+                auto edge = in_profile.m_edges[idx_layer];
+                if(edge < 1.f)
                 {
-                    atl::point2f l_curDrawPos = l_whitespaceUnit.m_drawPos * l_drawScale;
-
-                    for(const auto & l_layoutChar : l_whitespaceUnit.m_chars)
+                    auto radius = in_profile.df_radius[idx_layer];
+                    if(in_profile.scale_radius_to_view[idx_layer]) radius /= l_drawScale;
+                    edge -= radius;
+                    auto color = in_profile.m_colors[idx_layer];
+                    
+                    for(const auto & l_whitespaceUnit : l_whitespaceUnits)
                     {
-                        const auto & l_fontChar = l_font.m_fontChars[l_layoutChar.m_fontElementIdx];
-
-                        atl::point2f l_charDrawPos = l_curDrawPos;
-                        l_charDrawPos += l_fontChar.m_offset * l_drawScale  * l_layoutChar.m_scale;
-
-                        atl::box2f l_charDrawBounds(l_charDrawPos.y + l_fontChar.m_size.h * l_drawScale * l_layoutChar.m_scale,
-                                                    l_charDrawPos.x + l_fontChar.m_size.w * l_drawScale * l_layoutChar.m_scale,
-                                                    l_charDrawPos.y,
-                                                    l_charDrawPos.x);
-
-                        if(l_vertexData + 16 < l_end)
+                        atl::point2f l_curDrawPos = l_whitespaceUnit.m_drawPos * l_drawScale;
+                        
+                        for(const auto & l_layoutChar : l_whitespaceUnit.m_chars)
                         {
-                            l_numPrims += 2;
+                            const auto & l_fontChar = l_font.m_fontChars[l_layoutChar.m_fontElementIdx];
+                            
+                            atl::point2f l_charDrawPos = l_curDrawPos;
+                            l_charDrawPos += l_fontChar.m_offset * l_drawScale  * l_layoutChar.m_scale;
 
-                            // Bottom left:
-                            (*l_vertexData).x = l_charDrawBounds.l;
-                            (*l_vertexData).y = l_charDrawBounds.b;
-                            (*l_vertexData).u = l_fontChar.m_texBounds.l;
-                            (*l_vertexData).v = l_fontChar.m_texBounds.b;
-                            (*l_vertexData).index = (float)idx_layer;
-                            l_vertexData++;
-
-                            // Bottom right:
-                            (*l_vertexData).x = l_charDrawBounds.r;
-                            (*l_vertexData).y = l_charDrawBounds.b;
-                            (*l_vertexData).u = l_fontChar.m_texBounds.r;
-                            (*l_vertexData).v = l_fontChar.m_texBounds.b;
-                            (*l_vertexData).index = (float)idx_layer;
-                            l_vertexData++;
-
-                            // Top left:
-                            (*l_vertexData).x = l_charDrawBounds.l;
-                            (*l_vertexData).y = l_charDrawBounds.t;
-                            (*l_vertexData).u = l_fontChar.m_texBounds.l;
-                            (*l_vertexData).v = l_fontChar.m_texBounds.t;
-                            (*l_vertexData).index = (float)idx_layer;
-                            l_vertexData++;
-
-                            // Top right:
-                            (*l_vertexData).x = l_charDrawBounds.r;
-                            (*l_vertexData).y = l_charDrawBounds.t;
-                            (*l_vertexData).u = l_fontChar.m_texBounds.r;
-                            (*l_vertexData).v = l_fontChar.m_texBounds.t;
-                            (*l_vertexData).index = (float)idx_layer;
-                            l_vertexData++;
+                            atl::box2f l_gggcharDrawBounds(l_charDrawPos.y + (l_fontChar.m_size.h) * l_drawScale * l_layoutChar.m_scale,
+                                                        l_charDrawPos.x + (l_fontChar.m_size.w) * l_drawScale * l_layoutChar.m_scale,
+                                                        l_charDrawPos.y,
+                                                        l_charDrawPos.x);
+                            
+                            atl::box2f l_charDrawBounds(l_charDrawPos.y + (l_fontChar.m_size.h + l_font.field_bloom) * l_drawScale * l_layoutChar.m_scale,
+                                                        l_charDrawPos.x + (l_fontChar.m_size.w + l_font.field_bloom) * l_drawScale * l_layoutChar.m_scale,
+                                                        l_charDrawPos.y - l_font.field_bloom * l_drawScale * l_layoutChar.m_scale,
+                                                        l_charDrawPos.x - l_font.field_bloom * l_drawScale * l_layoutChar.m_scale);
+                            
+                            if(l_vertexData + 16 < l_end)
+                            {
+                                l_numPrims += 2;
+                                auto add_vertex = [&l_vertexData, &color, &edge, &radius, &in_profile](const atl::point2f & pt, const atl::point2f & uv) {
+                                    (*l_vertexData).x = pt.x;
+                                    (*l_vertexData).y = pt.y;
+                                    (*l_vertexData).u = uv.x;
+                                    (*l_vertexData).v = uv.y;
+                                    (*l_vertexData).r = color.r;
+                                    (*l_vertexData).g = color.g;
+                                    (*l_vertexData).b = color.b;
+                                    (*l_vertexData).a = color.a;
+                                    (*l_vertexData).edge = edge;
+                                    (*l_vertexData).radius = radius;
+                                    l_vertexData++;
+                                };
+                                add_vertex(l_charDrawBounds.bottom_left(), l_fontChar.m_texBounds.bottom_left());
+                                add_vertex(l_charDrawBounds.bottom_right(), l_fontChar.m_texBounds.bottom_right());
+                                add_vertex(l_charDrawBounds.top_left(), l_fontChar.m_texBounds.top_left());
+                                add_vertex(l_charDrawBounds.top_right(), l_fontChar.m_texBounds.top_right());
+                            }
+                            
+                            l_curDrawPos.x += l_fontChar.m_advance * l_drawScale * l_layoutChar.m_scale * l_layoutChar.m_kerningScale;
                         }
-
-                        l_curDrawPos.x += l_fontChar.m_advance * l_drawScale * l_layoutChar.m_scale * l_layoutChar.m_kerningScale;
                     }
                 }
             }
@@ -573,110 +586,11 @@ namespace atl_graphics_namespace_config
 
         // Shared uniforms:
         glUniform2f(pm_shaderUniforms[UNIFORM_TRANSLATION], in_position.x, in_position.y);
-        glUniform1f(pm_shaderUniforms[UNIFORM_ANTIALIASING_RADIUS], 0.1f * (30.f / in_scale));
         glUniform1i(pm_shaderUniforms[UNIFORM_SAMPLER_DISTANCE_FIELD], 0);
-
-        glUniform1fv(pm_shaderUniforms[UNIFORM_EDGES], 4, in_profile.m_edges);
-
-        {
-            GLfloat l_colors[4][4]{
-                {in_profile.m_colors[0].r, in_profile.m_colors[0].g, in_profile.m_colors[0].b, in_profile.m_colors[0].a},
-                {in_profile.m_colors[1].r, in_profile.m_colors[1].g, in_profile.m_colors[1].b, in_profile.m_colors[1].a},
-                {in_profile.m_colors[2].r, in_profile.m_colors[2].g, in_profile.m_colors[2].b, in_profile.m_colors[2].a},
-                {in_profile.m_colors[3].r, in_profile.m_colors[3].g, in_profile.m_colors[3].b, in_profile.m_colors[3].a},
-            };
-            glUniform4fv(pm_shaderUniforms[UNIFORM_COLORS], 4, &(l_colors[0][0]));
-        }
 
         glDrawElements(GL_TRIANGLES, in_numPrims * 3, GL_UNSIGNED_SHORT, (void*)0);
 
         // Swap buffers:
         pm_currentVertexBuffer = (pm_currentVertexBuffer + 1) % pcsm_numBuffers;
-    }
-
-
-    atl::point2f simple_font_renderer::drawCharacter(const simple_font_profile & in_profile,
-                                                     const scalable_font & in_scalable_font,
-                                                     const char in_character,
-                                                     const atl::point2f & in_position,
-                                                     const float in_size)
-    {
-        const auto & l_font_data = in_scalable_font.font_data();
-
-        if(pm_rendererState.setAsCurrentRenderer(this))
-        {
-            glEnable(GL_BLEND);
-            glDisable(GL_CULL_FACE);
-            glDisable(GL_DEPTH_TEST);
-            glClearColor(0.f, 0.f, 0.f, 1.f);
-            glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-            glUseProgram(pm_glProgram);
-
-            glUniform4f(pm_shaderUniforms[UNIFORM_SCREEN_DIM],
-                        pm_rendererState.m_currentBounds.l,
-                        pm_rendererState.m_currentBounds.b,
-                        pm_rendererState.m_currentBounds.width(),
-                        pm_rendererState.m_currentBounds.height());
-        }
-
-        //
-        for(const auto & l_fontChar : l_font_data.m_fontChars)
-        {
-            if(l_fontChar.m_char == in_character)
-            {
-                atl::box2f l_charDrawBounds(l_fontChar.m_offset.y + l_fontChar.m_size.h * in_size,
-                                            l_fontChar.m_offset.x + l_fontChar.m_size.w * in_size,
-                                            l_fontChar.m_offset.y,
-                                            l_fontChar.m_offset.x);
-
-                simple_font_renderer::Vertex * l_vertexData = pm_vertexData;
-
-                for(int idx_layer = 0; idx_layer < pcsm_maxLayersPerPass; idx_layer++)
-                {
-                    // Bottom left:
-                    (*l_vertexData).x = l_charDrawBounds.l;
-                    (*l_vertexData).y = l_charDrawBounds.b;
-                    (*l_vertexData).u = l_fontChar.m_texBounds.l;
-                    (*l_vertexData).v = l_fontChar.m_texBounds.b;
-                    (*l_vertexData).index = idx_layer;
-                    l_vertexData++;
-
-                    // Bottom right:
-                    (*l_vertexData).x = l_charDrawBounds.r;
-                    (*l_vertexData).y = l_charDrawBounds.b;
-                    (*l_vertexData).u = l_fontChar.m_texBounds.r;
-                    (*l_vertexData).v = l_fontChar.m_texBounds.b;
-                    (*l_vertexData).index = idx_layer;
-                    l_vertexData++;
-
-                    // Top left:
-                    (*l_vertexData).x = l_charDrawBounds.l;
-                    (*l_vertexData).y = l_charDrawBounds.t;
-                    (*l_vertexData).u = l_fontChar.m_texBounds.l;
-                    (*l_vertexData).v = l_fontChar.m_texBounds.t;
-                    (*l_vertexData).index = idx_layer;
-                    l_vertexData++;
-
-                    // Top right:
-                    (*l_vertexData).x = l_charDrawBounds.r;
-                    (*l_vertexData).y = l_charDrawBounds.t;
-                    (*l_vertexData).u = l_fontChar.m_texBounds.r;
-                    (*l_vertexData).v = l_fontChar.m_texBounds.t;
-                    (*l_vertexData).index = idx_layer;
-                    l_vertexData++;
-                }
-
-                //
-                p_drawBufferUsingProfile(in_profile,
-                                         in_scalable_font,
-                                         in_position,
-                                         in_size,
-                                         2 * pcsm_maxLayersPerPass); // Char is just 2 prims * layers
-
-                return atl::point2f(in_position.x + l_fontChar.m_advance * in_size, in_position.y);
-            }
-        }
-        return in_position;
     }
 }
