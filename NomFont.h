@@ -38,7 +38,6 @@ namespace atl_graphics_namespace_config
         atl::point2f m_pixTexelStride;
         float m_boundsYMin;
         float m_boundsYMax;
-        float m_lineHeight;
         float field_bloom;
     };
 

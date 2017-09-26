@@ -138,7 +138,6 @@ namespace atl_graphics_namespace_config
                             internal_font_data.field_bloom = field_bloom;
                             internal_font_data.m_boundsYMax = l_maxBoundsY;
                             internal_font_data.m_boundsYMin = l_minBoundsY;
-                            internal_font_data.m_lineHeight = 1.1f;
                             internal_font_data.m_pixTexelStride = atl::point2f(1.f / l_fontSheetWidth, 1.f / l_fontSheetHeight);
 
                             // Upload font sheet to video card:

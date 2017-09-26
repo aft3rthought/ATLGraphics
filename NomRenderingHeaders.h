@@ -41,16 +41,12 @@ namespace atl_graphics_namespace_config
 {
     inline bool check_gl_errors()
     {
-        bool retVal = true;
         GLenum atl_gl_err_define_local = GL_NO_ERROR;
         while((atl_gl_err_define_local = glGetError()) != GL_NO_ERROR)
         {
-            atl_fatal("gl error detected");
-#ifdef DEBUG
-            printf("atl::graphics - GL ERROR DETECTED: %i\n", atl_gl_err_define_local);
-#endif
-            retVal = false;
+            atl_log_function_impl("%s, line %d: gl error detected: %x\n", __FILE__, __LINE__, atl_gl_err_define_local);
+            atl::print_callstack();
         }
-        return retVal;
+        return atl_gl_err_define_local != GL_NO_ERROR;
     }
 }

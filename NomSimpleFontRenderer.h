@@ -23,28 +23,35 @@ namespace atl_graphics_namespace_config
         failed
     };
 
-    enum class font_layout_chunk_linebreak_type
-    {
-        no_line_break,
-        line_break_allowed,
-        must_line_break
-    };
+    namespace glyph_boundary_semantic {
+        using underlying_type = unsigned int;
+        constexpr underlying_type none                = 0b0;
+        constexpr underlying_type character           = 0b1;
+        constexpr underlying_type word                = 0b11;
+        constexpr underlying_type sentance            = 0b111;
+        constexpr underlying_type line                = 0b1111;
+    }
     
     struct layout_glyph_type
     {
         atl::size2f size;
         float advance;
         atl::point2f offset;
-        font_layout_chunk_linebreak_type line_break;
-        
-        atl::box2f result_bounds;
+        glyph_boundary_semantic::underlying_type boundary;
     };
+    
+    layout_glyph_type * string_to_layout_glyph(const scalable_font & in_font,
+                                               const std::string & l_stringToDraw,
+                                               layout_glyph_type * in_data_begin,
+                                               layout_glyph_type * in_data_end);
     
     void glyph_layout(const atl::box2f & l_drawArea,
                       atl::anchoring l_textAnchoring,
                       float in_numLines,
-                      layout_glyph_type * in_data_begin,
-                      layout_glyph_type * in_data_end);
+                      const layout_glyph_type * in_data_begin,
+                      const layout_glyph_type * in_data_end,
+                      atl::box2f * in_result_bounds_begin,
+                      atl::box2f * in_result_bounds_end);
 
     class simple_font_renderer
     {

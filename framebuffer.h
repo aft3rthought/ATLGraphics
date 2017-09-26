@@ -26,7 +26,7 @@ namespace atl_graphics_namespace_config
         
         GLuint framebuffer_name;
         GLuint texture_name;
-        bool valid;
+        bool valid = false;
     };
     
     void make_framebuffer(framebuffer_descriptor & descriptor);
@@ -38,6 +38,7 @@ namespace atl_graphics_namespace_config
         shared_renderer_state & renderer_state;
         
         framebuffer_scope(const framebuffer_descriptor & descriptor, shared_renderer_state & in_renderer_state);
+        framebuffer_scope(const framebuffer_descriptor & descriptor, shared_renderer_state & in_renderer_state, const atl::box2f & in_stage_bounds);
         ~framebuffer_scope();
     };
 }
