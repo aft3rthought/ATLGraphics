@@ -98,7 +98,8 @@ namespace atl
             wide_string_buffer[wide_string_length] = 0;
             wide_string_buffer[wide_string_length + 1] = 0;
 
-            auto task = Concurrency::create_task(storage_folder->GetFileAsync(::Platform::StringReference(wide_string_buffer, wide_string_length))).then(
+			auto task = Concurrency::create_task(storage_folder->GetFileAsync(::Platform::StringReference(wide_string_buffer, wide_string_length)));
+			task.then(
                 [this](Windows::Storage::StorageFile ^ loaded_file)
             {
                 if(loaded_file != nullptr)
@@ -106,19 +107,35 @@ namespace atl
                     Concurrency::create_task(Windows::Storage::FileIO::ReadBufferAsync(loaded_file)).then(
                         [this](Windows::Storage::Streams::IBuffer ^ buffer)
                     {
+						internal_status = file_data_status::ready;
                         internal_data.resize(buffer->Length);
-                        // TODO: I saw in some windows documentation, a try catch here. Should probably do that, and set internal_status to error
-                        auto data_reader = Windows::Storage::Streams::DataReader::FromBuffer(buffer);
-                        data_reader->ReadBytes(::Platform::ArrayReference<unsigned char>(internal_data.data(), internal_data.size()));
-                        delete data_reader; // As a best practice, explicitly close the dataReader resource as soon as it is no longer needed.
-                        internal_status = file_data_status::ready;
+						auto data_reader = Windows::Storage::Streams::DataReader::FromBuffer(buffer);
+						try
+						{
+							data_reader->ReadBytes(::Platform::ArrayReference<unsigned char>(internal_data.data(), internal_data.size()));
+						}
+						catch (Platform::Exception^ e)
+						{
+							internal_status = file_data_status::error;
+						}
+                        delete data_reader; // As a best practice, explicitly close the dataReader resource as soon as it is no longer needed.                        
                     });
                 }
                 else
                 {
                     internal_status = file_data_status::error;
                 }
-            });
+            }).then([this](Concurrency::task<void> t)
+			{
+				try
+				{
+					t.get();
+				}
+				catch (Platform::COMException^ e)
+				{
+					internal_status = file_data_status::error;
+				}
+			});
 #endif
         }
     }
